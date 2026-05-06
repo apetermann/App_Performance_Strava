@@ -16,8 +16,7 @@
     body{background:#F4F2EE;font-family:'Inter',sans-serif;color:#18181B;overscroll-behavior:none}
     ::-webkit-scrollbar{display:none}
     .syne{font-family:'Syne',sans-serif;font-weight:800}
-    input,button{font-family:'Inter',sans-serif}
-    button{cursor:pointer}
+    input,button{font-family:'Inter',sans-serif;cursor:pointer}
   </style>
 </head>
 <body>
@@ -26,6 +25,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
 const {useState,useEffect,useMemo,createElement:h}=React;
+
+/* ── CREDENCIAIS FIXAS ── */
+const CLIENT_ID   = "235154";
+const CLIENT_SEC  = "503e9c222e53cac459e0788ddac6f23ef692e1a2";
+const REDIRECT    = window.location.origin + window.location.pathname;
+const STOK        = "https://www.strava.com/oauth/token";
+const SAUTH       = "https://www.strava.com/oauth/authorize";
+const SAPI        = "https://www.strava.com/api/v3";
 
 const T={bg:"#F4F2EE",white:"#FFFFFF",text:"#18181B",muted:"#71717A",border:"#E4E0D8",
   orange:"#FC4C02",green:"#16A34A",greenL:"#F0FDF4",blue:"#2563EB",blueL:"#EFF6FF",
@@ -39,38 +46,8 @@ const isGym=t=>["WeightTraining","Yoga","Workout"].includes(t);
 const fmtFull=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
 const fmtMon=d=>new Date(d).toLocaleDateString("pt-BR",{month:"short",year:"2-digit"});
 const DAYS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
-
-/* ── DEMO DATA ── */
-function buildDemo(){
-  const acts=[];let id=1;
-  const runs=[
-    ["2025-11-04",4.0,1.547,142],["2025-11-11",4.5,1.558,143],["2025-11-18",5.0,1.561,144],["2025-11-25",4.8,1.555,143],
-    ["2025-12-02",4.2,1.608,144],["2025-12-09",5.2,1.619,145],["2025-12-16",5.0,1.622,146],["2025-12-23",4.8,1.618,145],
-    ["2026-01-06",5.0,1.709,146],["2026-01-13",4.8,1.707,146],["2026-01-20",5.0,1.712,147],["2026-01-27",5.2,1.716,147],
-    ["2026-02-03",5.5,1.803,148],["2026-02-10",5.8,1.805,148],["2026-02-17",5.5,1.806,148],["2026-02-24",5.8,1.807,148],
-    ["2026-03-03",6.0,1.852,149],["2026-03-10",7.0,1.859,150],["2026-03-19",8.3,1.848,152],["2026-03-26",7.0,1.860,151],
-    ["2026-04-07",6.5,1.880,150],["2026-04-14",6.8,1.882,150],["2026-04-22",7.0,1.884,151],["2026-04-30",5.1,1.916,156],
-    ["2026-05-01",4.2,1.900,142],["2026-05-03",5.1,1.916,156],["2026-05-04",4.8,1.905,151],
-  ];
-  runs.forEach(([ds,dk,spd,hr])=>{
-    acts.push({id:id++,type:"Run",name:"Corrida",start_date:ds+"T07:00:00Z",
-      distance:dk*1000,moving_time:Math.round(dk*1000/spd),average_speed:spd,
-      has_heartrate:true,average_heartrate:hr,max_heartrate:Math.round(hr+20),
-      total_elevation_gain:Math.round(30+Math.random()*60),
-      suffer_score:Math.round(40+Math.random()*65),calories:Math.round(dk*65)});
-  });
-  let d=new Date("2025-11-04");
-  while(d<=new Date("2026-05-04")){
-    const dow=d.getDay();
-    if(dow===1||dow===3||dow===5)acts.push({id:id++,type:"WeightTraining",name:"Musculação",
-      start_date:new Date(d).toISOString().replace("T00","T07"),distance:0,moving_time:3600,average_speed:0,has_heartrate:false});
-    d.setDate(d.getDate()+1);
-  }
-  return acts.sort((a,b)=>new Date(b.start_date)-new Date(a.start_date));
-}
-const DEMO_ACTS=buildDemo();
-const DEMO_ATH={id:99,firstname:"Alexandre",lastname:"Petermann",city:"Belo Horizonte",country:"Brasil"};
-const DEMO_STATS={ytd_run_totals:{count:47,distance:256000,moving_time:145000,elevation_gain:3400}};
+const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 
 /* ── COMPUTE ── */
 function computeDash(acts,stats){
@@ -136,15 +113,14 @@ function buildHeatmap(acts){
   return weeks;
 }
 
-/* ── SVG LINE CHART ── */
-function LineChart({data,dataKey,color,height=120,fmt}){
+/* ── SVG CHARTS ── */
+function LineChart({data,dataKey,color,height=120}){
   const vals=data.map(d=>d[dataKey]).filter(v=>v!=null);
   if(!vals.length)return null;
-  const min=Math.min(...vals),max=Math.max(...vals);
-  const range=max-min||1;
+  const min=Math.min(...vals),max=Math.max(...vals),range=max-min||1;
   const W=300,H=height,pad=8;
   const pts=data.filter(d=>d[dataKey]!=null).map((d,i,arr)=>({
-    x:pad+(i/(Math.max(arr.length-1,1)))*(W-pad*2),
+    x:pad+(i/Math.max(arr.length-1,1))*(W-pad*2),
     y:H-pad-((d[dataKey]-min)/range)*(H-pad*2),
     v:d[dataKey],label:d.label
   }));
@@ -159,7 +135,6 @@ function LineChart({data,dataKey,color,height=120,fmt}){
       h("path",{d:area,fill:`url(#lg${dataKey})`}),
       h("path",{d:path,fill:"none",stroke:color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}),
       pts.map((p,i)=>h("circle",{key:i,cx:p.x,cy:p.y,r:3,fill:color})),
-      // x labels
       pts.filter((_,i)=>i%Math.ceil(pts.length/5)===0||i===pts.length-1).map((p,i)=>
         h("text",{key:i,x:p.x,y:H,textAnchor:"middle",fontSize:8,fill:T.muted},p.label)
       )
@@ -167,7 +142,6 @@ function LineChart({data,dataKey,color,height=120,fmt}){
   );
 }
 
-/* ── SVG BAR CHART ── */
 function BarChart({data,dataKey,color,height=100}){
   const vals=data.map(d=>d[dataKey]);
   const max=Math.max(...vals)||1;
@@ -175,11 +149,10 @@ function BarChart({data,dataKey,color,height=100}){
   return h("div",{style:{overflowX:"auto"}},
     h("svg",{viewBox:`0 0 ${W} ${H}`,style:{width:"100%",height:H}},
       data.map((d,i)=>{
-        const x=pad+(i/(data.length))*(W-pad*2)+bw*0.3;
+        const x=pad+(i/data.length)*(W-pad*2)+bw*0.3;
         const bh=((d[dataKey]||0)/max)*(H-20);
-        const y=H-16-bh;
         return h("g",{key:i},
-          h("rect",{x,y,width:bw,height:bh,fill:color,rx:3}),
+          h("rect",{x,y:H-16-bh,width:bw,height:bh,fill:color,rx:3}),
           (i%Math.ceil(data.length/5)===0||i===data.length-1)&&
             h("text",{x:x+bw/2,y:H,textAnchor:"middle",fontSize:8,fill:T.muted},d.label)
         );
@@ -188,163 +161,172 @@ function BarChart({data,dataKey,color,height=100}){
   );
 }
 
-/* ── STRAVA AUTH ── */
-const STOK="https://www.strava.com/oauth/token";
-const SAUTH="https://www.strava.com/oauth/authorize";
-const SAPI="https://www.strava.com/api/v3";
-const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
-  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
-
-/* ── UI HELPERS ── */
-const card=(extra={})=>({background:T.white,border:`1px solid ${T.border}`,borderRadius:16,padding:16,...extra});
+/* ── UI ── */
+const card=(x={})=>({background:T.white,border:`1px solid ${T.border}`,borderRadius:16,padding:16,...x});
 const MetCard=({value,unit,label,sub,badge,bColor=T.orange,bBg})=>
   h("div",{style:card()},
     h("div",{style:{display:"flex",alignItems:"baseline",gap:4,marginBottom:6}},
       h("span",{className:"syne",style:{fontSize:34,color:T.text,lineHeight:1}},value),
       unit&&h("span",{style:{fontSize:12,color:T.muted}},unit)
     ),
-    h("div",{style:{fontSize:13,fontWeight:600,color:T.text,marginBottom:3}},label),
+    h("div",{style:{fontSize:13,fontWeight:600,marginBottom:3}},label),
     sub&&h("div",{style:{fontSize:11,color:T.muted}},sub),
     badge&&h("div",{style:{display:"inline-block",marginTop:8,padding:"3px 10px",borderRadius:100,
       background:bBg||bColor+"18",color:bColor,fontSize:10,fontWeight:700}},badge)
   );
-const Sec=({children})=>h("div",{className:"syne",style:{fontSize:11,color:T.muted,letterSpacing:2,
-  textTransform:"uppercase",padding:"24px 0 10px"}},children);
+const Sec=({children})=>h("div",{className:"syne",style:{fontSize:11,color:T.muted,
+  letterSpacing:2,textTransform:"uppercase",padding:"24px 0 10px"}},children);
+
+/* ── LOADING SCREEN ── */
+function Splash({msg}){
+  return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",
+    alignItems:"center",justifyContent:"center",background:T.bg,gap:16}},
+    h("div",{style:{fontSize:48}},"🏃"),
+    h("div",{className:"syne",style:{fontSize:20,color:T.text}},"Strava Performance"),
+    h("div",{style:{fontSize:13,color:T.muted}},msg||"Carregando..."),
+    h("div",{style:{width:40,height:3,background:T.orange,borderRadius:3,
+      animation:"none",marginTop:8}})
+  );
+}
 
 /* ── APP ── */
 function App(){
-  const[demo,setDemo]=useState(true);
-  const[cid,setCid]=useState(()=>ls.get("s_cid")||"");
-  const[cs,setCs]=useState(()=>ls.get("s_cs")||"");
   const[tokens,setTokens]=useState(()=>ls.get("s_tok"));
   const[athlete,setAthlete]=useState(null);
   const[acts,setActs]=useState([]);
   const[stats,setStats]=useState(null);
-  const[loading,setLoading]=useState(false);
+  const[loading,setLoading]=useState(true);
+  const[status,setStatus]=useState("Iniciando...");
   const[error,setError]=useState("");
-  const[setup,setSetup]=useState(false);
 
-  useEffect(()=>{if(demo){setAthlete(DEMO_ATH);setActs(DEMO_ACTS);setStats(DEMO_STATS);}},[demo]);
-
-  // OAuth callback
-  useEffect(()=>{
-    const p=new URLSearchParams(window.location.search);
-    const code=p.get("code"),_cid=ls.get("s_cid"),_cs=ls.get("s_cs");
-    if(!code||!_cid||!_cs)return;
-    window.history.replaceState({},"",window.location.pathname);
-    (async()=>{
-      setLoading(true);
-      try{
-        const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({client_id:_cid,client_secret:_cs,code,grant_type:"authorization_code"})});
-        const d=await r.json();
-        if(d.access_token){ls.set("s_tok",d);setTokens(d);setDemo(false);}
-        else setError("Erro: "+(d.message||"token inválido"));
-      }catch{setError("Falha na conexão");}
-      setLoading(false);
-    })();
-  },[]);
-
-  const getToken=async()=>{
-    if(!tokens)return null;
-    if(Date.now()/1000<(tokens.expires_at||0)-60)return tokens.access_token;
+  /* TOKEN MANAGEMENT */
+  const refreshToken=async(rt)=>{
     const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({client_id:ls.get("s_cid"),client_secret:ls.get("s_cs"),
-        refresh_token:tokens.refresh_token,grant_type:"refresh_token"})});
+      body:JSON.stringify({client_id:CLIENT_ID,client_secret:CLIENT_SEC,
+        refresh_token:rt,grant_type:"refresh_token"})});
     const d=await r.json();
     if(d.access_token){ls.set("s_tok",d);setTokens(d);return d.access_token;}
-    return null;
+    throw new Error("Falha ao renovar token");
   };
 
-  const api=async path=>{
-    const t=await getToken();if(!t)throw new Error("Sem acesso");
+  const getToken=async(tok)=>{
+    const t=tok||tokens;
+    if(!t)return null;
+    if(Date.now()/1000<(t.expires_at||0)-60)return t.access_token;
+    return refreshToken(t.refresh_token);
+  };
+
+  const api=async(path,tok)=>{
+    const t=await getToken(tok);
+    if(!t)throw new Error("sem token");
     const r=await fetch(SAPI+path,{headers:{Authorization:`Bearer ${t}`}});
-    if(!r.ok)throw new Error(`Erro ${r.status}`);return r.json();
+    if(!r.ok)throw new Error(`Erro ${r.status}`);
+    return r.json();
   };
 
-  useEffect(()=>{
-    if(!tokens||demo)return;
-    (async()=>{
-      setLoading(true);setError("");
-      try{
-        const[ath,activities]=await Promise.all([api("/athlete"),api("/athlete/activities?per_page=200")]);
-        setAthlete(ath);setActs(activities);
-        const st=await api(`/athletes/${ath.id}/stats`);setStats(st);
-      }catch(e){setError(e.message);}
-      setLoading(false);
-    })();
-  },[tokens]);
+  /* LOAD DATA */
+  const loadData=async(tok)=>{
+    setStatus("Carregando seus treinos...");
+    const[ath,activities]=await Promise.all([
+      api("/athlete",tok),
+      api("/athlete/activities?per_page=200",tok)
+    ]);
+    setAthlete(ath);setActs(activities);
+    setStatus("Calculando métricas...");
+    const st=await api(`/athletes/${ath.id}/stats`,tok);
+    setStats(st);
+  };
 
-  const disconnect=()=>{ls.del("s_tok");ls.del("s_cid");ls.del("s_cs");setTokens(null);setDemo(true);setSetup(false);};
+  /* INIT — runs on mount */
+  useEffect(()=>{
+    (async()=>{
+      // 1. Handle OAuth callback
+      const p=new URLSearchParams(window.location.search);
+      const code=p.get("code");
+      if(code){
+        window.history.replaceState({},"",window.location.pathname);
+        setStatus("Autorizando com o Strava...");
+        try{
+          const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({client_id:CLIENT_ID,client_secret:CLIENT_SEC,
+              code,grant_type:"authorization_code"})});
+          const d=await r.json();
+          if(!d.access_token)throw new Error(d.message||"Token inválido");
+          ls.set("s_tok",d);setTokens(d);
+          await loadData(d);
+          setLoading(false);
+          return;
+        }catch(e){setError(e.message);setLoading(false);return;}
+      }
+
+      // 2. Have saved token → use it
+      const saved=ls.get("s_tok");
+      if(saved){
+        setStatus("Conectando ao Strava...");
+        try{
+          await loadData(saved);
+          setLoading(false);
+          return;
+        }catch(e){
+          // Token broken → re-auth silently
+          ls.del("s_tok");
+        }
+      }
+
+      // 3. No token → redirect to Strava automatically
+      setStatus("Redirecionando para o Strava...");
+      await new Promise(r=>setTimeout(r,800));
+      window.location.href=`${SAUTH}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`;
+    })();
+  },[]);
 
   const dash=useMemo(()=>computeDash(acts,stats),[acts,stats]);
   const weekDays=useMemo(()=>getWeek(acts),[acts]);
   const heatmap=useMemo(()=>buildHeatmap(acts),[acts]);
 
-  /* SETUP SCREEN */
-  if(setup&&!tokens){
-    const inp={width:"100%",background:T.bg,border:`1px solid ${T.border}`,borderRadius:10,
-      padding:"12px 14px",color:T.text,fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:10};
-    return h("div",{style:{background:T.bg,minHeight:"100vh",display:"flex",alignItems:"center",
-      justifyContent:"center",padding:24}},
-      h("div",{style:{background:T.white,borderRadius:20,padding:32,maxWidth:400,width:"100%",
-        boxShadow:"0 20px 60px rgba(0,0,0,0.12)"}},
-        h("div",{className:"syne",style:{fontSize:26,marginBottom:6}},"Conectar Strava"),
-        h("div",{style:{fontSize:13,color:T.muted,marginBottom:24,lineHeight:2}},
-          "1. Acesse ",h("span",{style:{color:T.orange}},"strava.com/settings/api"),h("br"),
-          "2. Clique em Editar",h("br"),
-          "3. \"Authorization Callback Domain\":",h("br"),
-          h("span",{style:{color:T.orange,fontWeight:600}},window.location.hostname),h("br"),
-          "4. Cole Client ID e Secret abaixo"
-        ),
-        h("input",{style:inp,placeholder:"Client ID (ex: 235154)",value:cid,onChange:e=>setCid(e.target.value)}),
-        h("input",{style:inp,type:"password",placeholder:"Client Secret",value:cs,onChange:e=>setCs(e.target.value)}),
-        error&&h("div",{style:{color:"#DC2626",fontSize:12,marginBottom:10}},"⚠ "+error),
-        h("button",{onClick:()=>{
-          if(!cid.trim()||!cs.trim()){setError("Preencha os dois campos");return;}
-          ls.set("s_cid",cid.trim());ls.set("s_cs",cs.trim());setError("");
-          const red=window.location.origin+window.location.pathname;
-          window.location.href=`${SAUTH}?client_id=${cid.trim()}&redirect_uri=${encodeURIComponent(red)}&response_type=code&approval_prompt=force&scope=read,activity:read_all`;
-        },style:{width:"100%",background:T.orange,border:"none",borderRadius:10,padding:14,
-          color:"#fff",fontSize:15,fontWeight:700}},"CONECTAR COM STRAVA →"),
-        h("button",{onClick:()=>setSetup(false),style:{width:"100%",background:"none",border:"none",
-          color:T.muted,fontSize:13,marginTop:10,padding:8}},"← voltar ao demo")
-      )
-    );
-  }
+  /* LOADING */
+  if(loading&&!error)return h(Splash,{msg:status});
 
-  /* MAIN */
-  const wrap={background:T.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:40};
+  /* ERROR */
+  if(error)return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",
+    alignItems:"center",justifyContent:"center",padding:24,gap:16}},
+    h("div",{style:{fontSize:40}},"⚠️"),
+    h("div",{className:"syne",style:{fontSize:18}},"Erro de conexão"),
+    h("div",{style:{fontSize:13,color:T.muted,textAlign:"center"}},error),
+    h("button",{onClick:()=>{ls.del("s_tok");window.location.reload();},
+      style:{background:T.orange,border:"none",borderRadius:10,padding:"12px 24px",
+        color:"#fff",fontSize:14,fontWeight:700,marginTop:8}},
+      "Tentar novamente")
+  );
 
-  return h("div",{style:wrap},
+  /* MAIN DASHBOARD */
+  return h("div",{style:{background:T.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:40}},
+
     /* HEADER */
-    h("div",{style:{background:T.white,borderBottom:`1px solid ${T.border}`,padding:"16px 20px",
-      position:"sticky",top:0,zIndex:50}},
+    h("div",{style:{background:T.white,borderBottom:`1px solid ${T.border}`,
+      padding:"16px 20px",position:"sticky",top:0,zIndex:50}},
       h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between"}},
         h("div",null,
-          h("div",{className:"syne",style:{fontSize:17}},athlete?`${athlete.firstname} ${athlete.lastname}`:"—"),
-          h("div",{style:{fontSize:11,color:T.muted,marginTop:1}},"Strava · Dashboard de Performance")
+          h("div",{className:"syne",style:{fontSize:17}},
+            athlete?`${athlete.firstname} ${athlete.lastname}`:"—"),
+          h("div",{style:{fontSize:11,color:T.muted,marginTop:1}},
+            "Strava · Dashboard de Performance")
         ),
-        h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-          demo&&h("div",{style:{background:"#FFF0EB",border:`1px solid ${T.orange}30`,borderRadius:8,
-            padding:"4px 8px",color:T.orange,fontSize:9,fontWeight:700}},"DEMO"),
-          demo
-            ?h("button",{onClick:()=>setSetup(true),style:{background:T.orange,border:"none",
-                borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:11,fontWeight:700}},
-              "CONECTAR")
-            :h("button",{onClick:disconnect,style:{background:T.bg,border:`1px solid ${T.border}`,
-                borderRadius:8,padding:"6px 10px",color:T.muted,fontSize:11}},"Sair")
+        h("div",{style:{fontSize:10,color:T.muted,textAlign:"right"}},
+          new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}),
+          h("br"),
+          h("span",{style:{color:T.green,fontWeight:600}},
+            athlete?"● Conectado":"—")
         )
-      ),
-      loading&&h("div",{style:{height:2,background:`linear-gradient(90deg,${T.orange},transparent)`,
-        borderRadius:2,marginTop:8}})
+      )
     ),
 
     h("div",{style:{padding:"0 16px"}},
 
       /* STREAK */
-      dash&&h("div",{style:{background:`linear-gradient(135deg,${T.orange},#FF6B35)`,borderRadius:16,
-        padding:"20px 18px",marginTop:16,color:"#fff",position:"relative",overflow:"hidden"}},
+      dash&&h("div",{style:{background:`linear-gradient(135deg,${T.orange},#FF6B35)`,
+        borderRadius:16,padding:"20px 18px",marginTop:16,color:"#fff",
+        position:"relative",overflow:"hidden"}},
         h("div",{style:{position:"absolute",right:-16,top:-16,fontSize:72,opacity:0.15}},"🔥"),
         h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:4}},
           h("span",{style:{fontSize:22}},"🔥"),
@@ -392,7 +374,7 @@ function App(){
           h("strong",{style:{color:T.orange}},`Melhora: ${dash.firstPaceStr}/km → ${dash.lastPaceStr}/km`),
           h("br"),
           h("span",{style:{opacity:0.8,fontSize:13}},
-            "Quase 2 min/km em 5 meses — evolução acima da curva para iniciantes. Próximo alvo: ",
+            "Quase 2 min/km em 5 meses — evolução acima da curva. Próximo alvo: ",
             h("strong",{style:{color:"#60D394"}},"8:00/km"))
         )
       ),
@@ -442,7 +424,8 @@ function App(){
               h("div",{style:{fontSize:18,marginBottom:2}},"🏃"),
               h("div",{style:{fontSize:9,fontWeight:700}},(runAct.distance/1000).toFixed(1)+" km"),
               h("div",{style:{fontSize:8,color:T.orange}},pace(runAct.average_speed)+"/km"),
-              runAct.has_heartrate&&h("div",{style:{fontSize:8,color:T.muted}},Math.round(runAct.average_heartrate)+"bpm")
+              runAct.has_heartrate&&h("div",{style:{fontSize:8,color:T.muted}},
+                Math.round(runAct.average_heartrate)+"bpm")
             ),
             !runAct&&gymAct&&h(React.Fragment,null,
               h("div",{style:{fontSize:18,marginBottom:2}},"🏋️"),
@@ -488,10 +471,7 @@ function App(){
       h("div",{style:{marginTop:14,padding:"12px 14px",background:T.bg,
         border:`1px dashed ${T.border}`,borderRadius:12,fontSize:11,color:T.muted,textAlign:"center"}},
         "📱 Safari → Compartilhar → ",h("strong",null,"Adicionar à Tela de Início")
-      ),
-
-      error&&h("div",{style:{marginTop:12,padding:12,background:"#FEF2F2",
-        border:"1px solid #FECACA",borderRadius:10,color:"#DC2626",fontSize:12}},"⚠ "+error)
+      )
     )
   );
 }
