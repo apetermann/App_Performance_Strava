@@ -6,17 +6,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Strava Perf"/>
-  <meta name="theme-color" content="#0F0F0F"/>
+  <meta name="theme-color" content="#0C0C0C"/>
   <title>Strava Performance</title>
   <link rel="manifest" href="manifest.json"/>
   <link rel="apple-touch-icon" href="icon.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    body{background:#0F0F0F;font-family:'Inter',sans-serif;color:#F0F0F0;overscroll-behavior:none}
+    body{background:#0C0C0C;font-family:'Inter',sans-serif;color:#F0F0F0;overscroll-behavior:none}
     ::-webkit-scrollbar{display:none}
     .syne{font-family:'Syne',sans-serif;font-weight:800}
     button{cursor:pointer;font-family:'Inter',sans-serif}
+    input{font-family:'Inter',sans-serif}
   </style>
 </head>
 <body>
@@ -24,9 +25,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
-const {useState,useEffect,useMemo,createElement:h}=React;
+const {useState,useEffect,useMemo,useCallback,createElement:h,Fragment}=React;
 
-/* ── CREDENCIAIS ── */
+/* ── CREDENTIALS ── */
 const CLIENT_ID  = "235154";
 const CLIENT_SEC = "503e9c222e53cac459e0788ddac6f23ef692e1a2";
 const REDIRECT   = window.location.origin+window.location.pathname;
@@ -34,646 +35,673 @@ const STOK       = "https://www.strava.com/oauth/token";
 const SAUTH      = "https://www.strava.com/oauth/authorize";
 const SAPI       = "https://www.strava.com/api/v3";
 
-/* ── TEMA ESCURO ── */
+/* ── THEME ── */
 const T={
-  bg:"#0F0F0F", card:"#1A1A1A", cardWarm:"#1C0A00", cardBlue:"#050D1C",
-  border:"#272727", borderOr:"#4A1E00", borderBl:"#0F2040",
-  text:"#F0F0F0", muted:"#777777",
-  orange:"#FC4C02", blue:"#3B82F6", green:"#22C55E", yellow:"#F59E0B", red:"#EF4444",
+  bg:"#0C0C0C", card:"#171717", card2:"#1E1E1E",
+  border:"#2A2A2A", text:"#F0F0F0", muted:"#666",
+  orange:"#FC4C02", orangeDim:"rgba(252,76,2,0.12)", orangeBorder:"rgba(252,76,2,0.4)",
+  green:"#00C896", greenDim:"rgba(0,200,150,0.12)", greenBorder:"rgba(0,200,150,0.4)",
+  blue:"#3B82F6",  blueDim:"rgba(59,130,246,0.12)", blueBorder:"rgba(59,130,246,0.4)",
+  red:"#EF4444",
+  z1:"#FECACA", z2:"#FCA5A5", z3:"#F87171", z4:"#EF4444", z5:"#B91C1C"
 };
 
 /* ── UTILS ── */
-const isRun =t=>["Run","TrailRun","VirtualRun"].includes(t);
-const isGym =t=>["WeightTraining","Yoga","Workout"].includes(t);
-const pace  =ms=>{if(!ms)return"--";const s=1000/ms;return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;};
-const paceN =ms=>ms?+(1000/ms/60).toFixed(4):0;
-const paceS =n=>`${Math.floor(n)}:${String(Math.round((n%1)*60)).padStart(2,"0")}`;
+const paceMs=ms=>{if(!ms)return"--";const s=1000/ms;return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;};
+const paceN=ms=>ms?+(1000/ms/60).toFixed(2):null;
+const fmtDur=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h ${m}m`:`${m}m`;};
 const fmtMon=d=>new Date(d).toLocaleDateString("pt-BR",{month:"short",year:"2-digit"});
-const fmtDay=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
-const DAYS  =["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
-const ls    ={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
-               set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
-               del:k=>localStorage.removeItem(k)};
+const fmtFull=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
+const fmtDay=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+const isRun=t=>["Run","TrailRun","VirtualRun"].includes(t);
+const isGym=t=>["WeightTraining","Yoga","Workout"].includes(t);
+const DAYS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
+const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 
-/* ── SEMANA ── */
-function weekRange(offset=0){
-  const now=new Date(),dow=(now.getDay()+6)%7;
-  const mon=new Date(now);mon.setDate(now.getDate()-dow-offset*7);mon.setHours(0,0,0,0);
+/* ── WEEK HELPERS ── */
+function getWeekBounds(offset=0){
+  const today=new Date();
+  const dow=(today.getDay()+6)%7;
+  const mon=new Date(today);mon.setDate(today.getDate()-dow-(offset*7));mon.setHours(0,0,0,0);
   const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
-  return{start:mon,end:sun};
+  return{mon,sun};
 }
-function fmtWR(offset=0){
-  const{start,end}=weekRange(offset);
-  const o={day:"2-digit",month:"short"};
-  const s=start.toLocaleDateString("pt-BR",o).replace(".","").toUpperCase();
-  const e=end.toLocaleDateString("pt-BR",{...o,year:"numeric"}).replace(".","").toUpperCase();
-  return`${s} – ${e}`;
+function getWeekActs(acts,offset=0){
+  const{mon,sun}=getWeekBounds(offset);
+  return acts.filter(a=>{const d=new Date(a.start_date);return d>=mon&&d<=sun;});
 }
-function compWeek(acts,offset=0){
-  const{start,end}=weekRange(offset);
-  const wa=acts.filter(a=>{const d=new Date(a.start_date);return d>=start&&d<=end;});
-  const runs=wa.filter(a=>isRun(a.type));
-  const gyms=wa.filter(a=>isGym(a.type));
-  const kmTotal=runs.reduce((s,r)=>s+r.distance/1000,0);
-  const hrR=runs.filter(r=>r.has_heartrate&&r.average_heartrate);
-  const avgHR=hrR.length?Math.round(hrR.reduce((s,r)=>s+r.average_heartrate,0)/hrR.length):null;
-  const avgSpd=runs.length?runs.reduce((s,r)=>s+r.average_speed,0)/runs.length:0;
-  const effort=runs.reduce((s,r)=>s+(r.suffer_score||0),0);
-  const elevGain=runs.reduce((s,r)=>s+(r.total_elevation_gain||0),0);
-  const bestRun=runs.length?[...runs].sort((a,b)=>b.average_speed-a.average_speed)[0]:null;
-  const days=Array.from({length:7},(_,i)=>{
-    const d=new Date(start);d.setDate(d.getDate()+i);
+function getWeekDays(acts,offset=0){
+  const{mon}=getWeekBounds(offset);
+  return Array.from({length:7},(_,i)=>{
+    const d=new Date(mon);d.setDate(d.getDate()+i);
     const ds=d.toISOString().split("T")[0];
-    return{date:d,acts:wa.filter(a=>a.start_date.startsWith(ds))};
+    return{date:d,acts:acts.filter(a=>a.start_date.startsWith(ds))};
   });
-  return{start,end,acts:wa,runs,gyms,kmTotal,avgHR,avgSpd,effort,elevGain,bestRun,days};
+}
+function weekLabel(offset){
+  const{mon,sun}=getWeekBounds(offset);
+  const fmt=d=>d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
+  return`${fmt(mon)} – ${fmt(sun)} ${sun.getFullYear()}`;
 }
 
-/* ── 6 MESES ── */
-function comp6M(acts,stravaStats){
-  const runs=acts.filter(a=>isRun(a.type)).sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
-  if(!runs.length)return null;
+/* ── HR ZONES ESTIMATION ── */
+// Given avg HR and zone boundaries, estimate time distribution across zones
+// Uses a bell curve centered on avg HR, spread ≈ 12% of maxHR
+function estimateZoneDist(avgHR, maxHR, zoneRanges, isGymAct=false){
+  if(!zoneRanges||!zoneRanges.length) return null;
+  if(isGymAct) return[0.75,0.18,0.05,0.02,0.00]; // gym: mostly Z1
+  if(!avgHR) return null;
+  const sigma=maxHR?maxHR*0.12:18;
+  const dist=zoneRanges.map(({min,max})=>{
+    const lo=min, hi=max===-1?maxHR*1.2:max;
+    // Approximate area under normal curve between lo and hi
+    const norm=x=>0.5*(1+Math.tanh((x-avgHR)/(sigma*1.41)));
+    return Math.max(0,norm(hi)-norm(lo));
+  });
+  const sum=dist.reduce((a,b)=>a+b,0)||1;
+  return dist.map(d=>d/sum);
+}
+
+function aggregateZones(acts, zoneRanges){
+  if(!zoneRanges||!zoneRanges.length) return null;
+  let totalSec=0;
+  const zoneSec=[0,0,0,0,0];
+  acts.forEach(a=>{
+    const dur=a.moving_time||0;
+    const gym=isGym(a.type);
+    const hr=a.has_heartrate?a.average_heartrate:null;
+    const maxHr=a.max_heartrate||190;
+    const dist=estimateZoneDist(gym?80:hr, maxHr, zoneRanges, gym);
+    if(!dist)return;
+    totalSec+=dur;
+    dist.forEach((p,i)=>{if(i<5)zoneSec[i]+=dur*p;});
+  });
+  if(!totalSec)return null;
+  const total=zoneSec.reduce((a,b)=>a+b,0)||1;
+  return zoneSec.map(s=>Math.round(s/total*100));
+}
+
+/* ── MONTHLY DATA ── */
+function buildMonthly(acts){
+  const map={};
+  acts.filter(a=>isRun(a.type)).forEach(r=>{
+    const k=fmtMon(r.start_date);
+    if(!map[k])map[k]={label:k,runs:0,km:0,paceSum:0,hrSum:0,hrN:0,order:new Date(r.start_date).getTime()};
+    map[k].runs++;map[k].km+=r.distance/1000;map[k].paceSum+=(paceN(r.average_speed)||0);
+    if(r.has_heartrate){map[k].hrSum+=r.average_heartrate;map[k].hrN++;}
+  });
+  return Object.values(map).sort((a,b)=>a.order-b.order)
+    .map(m=>({label:m.label,km:+m.km.toFixed(1),corridas:m.runs,
+      pace:+(m.paceSum/m.runs).toFixed(2),hr:m.hrN?Math.round(m.hrSum/m.hrN):null}));
+}
+
+/* ── STREAK ── */
+function calcStreak(acts){
+  const runs=acts.filter(a=>isRun(a.type)).sort((a,b)=>new Date(b.start_date)-new Date(a.start_date));
   let streak=0;
   const today=new Date();
-  let ws=new Date(today);ws.setDate(ws.getDate()-((ws.getDay()+6)%7));
+  let ws=new Date(today);ws.setDate(ws.getDate()-((ws.getDay()+6)%7));ws.setHours(0,0,0,0);
   for(let i=0;i<60;i++){
     const we=new Date(ws);we.setDate(we.getDate()+7);
     if(!runs.some(r=>{const d=new Date(r.start_date);return d>=ws&&d<we;}))break;
     streak++;ws.setDate(ws.getDate()-7);
   }
-  const monthly={};
-  runs.forEach(r=>{
-    const k=fmtMon(r.start_date);
-    if(!monthly[k])monthly[k]={label:k,runs:0,km:0,pS:0,hS:0,hN:0,ord:new Date(r.start_date).getTime()};
-    monthly[k].runs++;monthly[k].km+=r.distance/1000;monthly[k].pS+=paceN(r.average_speed);
-    if(r.has_heartrate&&r.average_heartrate){monthly[k].hS+=r.average_heartrate;monthly[k].hN++;}
-  });
-  const monthlyData=Object.values(monthly).sort((a,b)=>a.ord-b.ord)
-    .map(m=>({label:m.label,km:+m.km.toFixed(1),corridas:m.runs,
-      pace:+(m.pS/m.runs).toFixed(4),hr:m.hN?Math.round(m.hS/m.hN):null}));
-  const biggest=[...runs].sort((a,b)=>b.distance-a.distance)[0];
-  const bestPR =[...runs].sort((a,b)=>b.average_speed-a.average_speed)[0];
-  const first4=runs.slice(0,4),last4=runs.slice(-4);
-  const firstP=first4.reduce((s,r)=>s+paceN(r.average_speed),0)/first4.length;
-  const lastP =last4.reduce((s,r) =>s+paceN(r.average_speed),0)/last4.length;
-  const maxHR=Math.max(...runs.map(r=>r.max_heartrate||0).filter(Boolean))||185;
-  const hrZones=compHRZ(runs,maxHR);
+  return streak;
+}
+
+/* ── COACH ANALYSIS ── */
+function paceStr(p){const m=Math.floor(p),s=Math.round((p-m)*60);return`${m}:${String(s).padStart(2,"0")}`;}
+
+function analyzeWeek(weekActs, prevActs, isCurrent){
+  const wRuns=weekActs.filter(a=>isRun(a.type));
+  const pRuns=prevActs.filter(a=>isRun(a.type));
+  const wKm=wRuns.reduce((s,r)=>s+r.distance/1000,0);
+  const pKm=pRuns.reduce((s,r)=>s+r.distance/1000,0);
+  const kmChg=pKm>0?(wKm-pKm)/pKm*100:0;
+  const wSpd=wRuns.length?wRuns.reduce((s,r)=>s+r.average_speed,0)/wRuns.length:0;
+  const pSpd=pRuns.length?pRuns.reduce((s,r)=>s+r.average_speed,0)/pRuns.length:0;
+  const paceChg=pSpd>0?paceN(wSpd)-paceN(pSpd):0;
+  const wHR=wRuns.filter(r=>r.has_heartrate);
+  const avgHR=wHR.length?Math.round(wHR.reduce((s,r)=>s+r.average_heartrate,0)/wHR.length):null;
+  const effort=wRuns.reduce((s,r)=>s+(r.suffer_score||0),0);
+
+  if(!wRuns.length){
+    return{headline:"Sem corridas nesta semana",points:[isCurrent?"Semana em andamento ou de descanso ativo. O descanso é parte do treino — os músculos se reconstroem nesse período.":"Semana sem corridas. Pode ter sido descanso planejado ou intercorrência."],conclusion:""};
+  }
+
+  const points=[];
+
+  // Volume
+  if(pKm>0){
+    const dir=kmChg>=0?"📈 Acima":"📉 Abaixo";
+    points.push(`${dir} do volume habitual — ${Math.abs(kmChg).toFixed(0)}% ${kmChg>=0?"a mais":"a menos"} que a semana anterior (${pKm.toFixed(1)} → ${wKm.toFixed(1)} km). ${kmChg>15?"Cuidado para não aumentar mais de 10% por semana — risco de lesão.":kmChg<-25?"Volume reduzido. Se foi intencional (semana de descarga), ótimo.":"Progressão segura."}`);
+  }
+
+  // Pace
+  if(wSpd>0){
+    if(pSpd>0){
+      const faster=paceChg<-0.05;
+      points.push(`${faster?"⚡ Ritmo melhorou":"🧘 Ritmo mais conservador"} — ${paceMs(wSpd)}/km esta semana vs ${paceMs(pSpd)}/km na anterior. ${faster?"Adaptação positiva — o treino está surtindo efeito.":"Ritmo mais tranquilo pode indicar fadiga ou treino de recuperação."}`);
+    } else {
+      points.push(`⚡ Ritmo médio: ${paceMs(wSpd)}/km — resultado ${paceN(wSpd)<9?"acima da média":"dentro do esperado"} para sua fase de treinamento.`);
+    }
+  }
+
+  // HR
+  if(avgHR){
+    const zone=avgHR<118?"Z1 (recuperação)":avgHR<148?"Z2 (aeróbico base)":avgHR<162?"Z3 (aeróbico intenso)":avgHR<176?"Z4 (limiar)":"Z5 (máximo)";
+    const tip=avgHR<148?"Maioria do tempo em base aeróbica — ideal para construção de resistência.":avgHR<162?"Intensidade moderada a alta — equilibre com dias de recuperação.":"Alta intensidade — garanta 48h de descanso entre sessões.";
+    points.push(`❤️ FC média: ${avgHR} bpm (${zone}). ${tip}`);
+  }
+
+  // Effort
+  if(effort>0) points.push(`🔥 Esforço relativo acumulado: ${effort} pontos. ${effort>150?"Semana de alta carga — priorize sono e nutrição.":effort>80?"Carga moderada — bem calibrada para evolução.":"Carga leve — bom para semanas de recuperação."}`);
+
+  const conclusion=isCurrent
+    ?(kmChg>0&&paceChg<0?"Semana excelente: mais volume e ritmo melhor. Exatamente o padrão de quem evolui.":wRuns.length>=3?"Semana consistente. Mantenha a frequência — ela é mais importante que a intensidade.":"Frequência baixa. Tente adicionar pelo menos uma corrida curta esta semana.")
+    :(paceChg<-0.1?"Semana com evolução de ritmo — sinal positivo de adaptação.":"Semana dentro do padrão de construção de base.");
+
+  const headline=`${wRuns.length} corrida${wRuns.length>1?"s":""} · ${wKm.toFixed(1)} km${pKm>0?" ("+( kmChg>=0?"+":"")+kmChg.toFixed(0)+"% vs semana ant.)":""}`;
+  return{headline,points,conclusion};
+}
+
+function analyzeSixMonths(monthlyData, totalKm, runCount, streak, biggestKm, acts){
+  if(!monthlyData||monthlyData.length<2) return null;
+  const first=monthlyData[0],last=monthlyData[monthlyData.length-1];
+  const paceImp=first.pace-last.pace;
+  const paceImpMin=Math.floor(paceImp),paceImpSec=Math.round((paceImp-paceImpMin)*60);
+  const paceImpStr=`${paceImpMin}:${String(paceImpSec).padStart(2,"0")}`;
+  const volGrowth=first.km>0?((last.km-first.km)/first.km*100):0;
+  const maxMonth=[...monthlyData].sort((a,b)=>b.km-a.km)[0];
+  const avgFreq=Math.round(runCount/monthlyData.length);
+  const runsPerMonth=monthlyData.map(m=>m.corridas);
+  const freqGrowth=runsPerMonth[runsPerMonth.length-1]-runsPerMonth[0];
+
   return{
-    runs,streak,monthlyData,maxHR,hrZones,
-    totalKm:+(((stravaStats?.ytd_run_totals?.distance||runs.reduce((s,r)=>s+r.distance,0))/1000)).toFixed(0),
-    runCount:stravaStats?.ytd_run_totals?.count||runs.length,
-    bestPace:pace(bestPR.average_speed),bestPaceDate:fmtDay(bestPR.start_date),
-    firstPaceStr:paceS(firstP),lastPaceStr:paceS(lastP),
-    paceImprove:firstP-lastP,
-    biggestKm:+(biggest.distance/1000).toFixed(1),biggestDate:fmtDay(biggest.start_date),
+    intro:`O número mais importante: seu ritmo saiu de ${paceStr(first.pace)}/km em ${first.label} para ${paceStr(last.pace)}/km em ${last.label} — ${paceImpStr} de melhora em ${monthlyData.length} meses. Para um iniciante, isso é acima da curva.`,
+    points:[
+      {icon:"🔥",title:"Consistência fora do normal",text:`${streak} semanas consecutivas sem uma semana em branco — média de ${avgFreq} corrida${avgFreq>1?"s":""} por mês. Isso é o que separa atletas que evoluem dos que ficam no mesmo lugar. Você acertou no mais difícil.`},
+      {icon:"📈",title:"Volume crescendo com qualidade",text:`De ${first.km.toFixed(0)} km no primeiro mês para ${last.km.toFixed(0)} km no último (${volGrowth>0?"+":""}${volGrowth.toFixed(0)}%). Melhor mês: ${maxMonth.label} com ${maxMonth.km.toFixed(1)} km. ${freqGrowth>2?"Frequência de treinos também aumentou — bom sinal de comprometimento.":"Frequência estável — consistência é mais valiosa que volume."}`},
+      {icon:"🎯",title:"O próximo passo está claro",text:`Sua maior corrida foi ${biggestKm} km. Para evoluir agora, adicione uma corrida longa semanal — começa com ${(biggestKm+1).toFixed(0)}–${(biggestKm+2).toFixed(0)} km aos sábados, progressivo. Com isso no lugar, um 10K até agosto é totalmente factível.`}
+    ],
+    conclusion:`Com ${totalKm} km em ${runCount} corridas em ${monthlyData.length} meses, a base está sólida. Ritmo de ${paceStr(last.pace)}/km como média recente. Meta realista: ${paceStr(last.pace-0.2)}/km nos próximos 60 dias aumentando volume da corrida longa.`
   };
 }
 
-/* ── ZONAS FC ── */
-function compHRZ(runs,maxHR){
-  const zones=[
-    {name:"Z1 Recuperação",min:0,    max:0.60,color:"#60A5FA"},
-    {name:"Z2 Aeróbico",   min:0.60, max:0.70,color:"#34D399"},
-    {name:"Z3 Tempo",      min:0.70, max:0.80,color:"#FDE047"},
-    {name:"Z4 Limiar",     min:0.80, max:0.90,color:"#F97316"},
-    {name:"Z5 Máximo",     min:0.90, max:1.00,color:"#EF4444"},
-  ];
-  const counts=zones.map(()=>0);
-  runs.forEach(r=>{
-    if(!r.has_heartrate||!r.average_heartrate)return;
-    const p=r.average_heartrate/maxHR;
-    const zi=zones.findIndex((z,i)=>p>=z.min&&(p<z.max||i===zones.length-1));
-    if(zi>=0)counts[zi]+=r.moving_time/60;
-  });
-  const total=counts.reduce((s,c)=>s+c,0)||1;
-  return zones.map((z,i)=>({...z,minutes:Math.round(counts[i]),pct:Math.round(counts[i]/total*100)}));
-}
-
-/* ── ANÁLISE INTELIGENTE ── */
-function genAnalysis(period,{curr,prev,sixM}){
-  if(period==="atual"){
-    const L=[];
-    const restDays=curr.days.filter(d=>d.acts.length===0).length;
-    if(curr.runs.length===0){
-      L.push("😴 Nenhuma corrida registrada esta semana ainda. Que tal sair agora?");
-    } else {
-      if(prev.kmTotal>0){
-        const diff=curr.kmTotal-prev.kmTotal;
-        const pct=Math.round(Math.abs(diff)/prev.kmTotal*100);
-        if(diff>0.3) L.push(`📈 Volume ${pct}% acima da semana passada — ${curr.kmTotal.toFixed(1)} km vs ${prev.kmTotal.toFixed(1)} km. Progressão positiva de carga.`);
-        else if(diff<-0.3) L.push(`📉 Volume ${pct}% abaixo da semana passada (${curr.kmTotal.toFixed(1)} km vs ${prev.kmTotal.toFixed(1)} km). Semana de deload ou recuperação.`);
-        else L.push(`➡️ Volume estável em relação à semana passada (${curr.kmTotal.toFixed(1)} km). Consistência mantida.`);
-      }
-      if(curr.avgSpd>0&&prev.avgSpd>0){
-        const d=paceN(curr.avgSpd)-paceN(prev.avgSpd);
-        if(d<-0.05) L.push(`⚡ Ritmo ${Math.abs(d).toFixed(2)} min/km mais rápido que na semana anterior — sinal claro de progressão aeróbica.`);
-        else if(d>0.08) L.push(`🔄 Ritmo mais conservador (${pace(curr.avgSpd)}/km). Pode ser estratégia de recuperação — verifique se está dormindo bem.`);
-        else L.push(`✅ Ritmo estável em ${pace(curr.avgSpd)}/km — consistência é o que constrói base aeróbica.`);
-      }
-      if(curr.avgHR){
-        const p=sixM?.maxHR?Math.round(curr.avgHR/sixM.maxHR*100):null;
-        if(curr.avgHR<145) L.push(`❤️ FC média baixa (${curr.avgHR}${p?" bpm · "+p+"% FCmáx":" bpm"}) — zona aeróbica de base. Ideal para construção de volume.`);
-        else if(curr.avgHR<162) L.push(`❤️ FC média (${curr.avgHR}${p?" bpm · "+p+"% FCmáx":" bpm"}) — zona aeróbica/limiar. Bom equilíbrio intensidade×volume.`);
-        else L.push(`🔥 FC média elevada (${curr.avgHR}${p?" bpm · "+p+"% FCmáx":" bpm"}) — semana de alta intensidade. Priorize sono e recuperação nos próximos dias.`);
-      }
-      if(restDays>=2) L.push(`😴 ${restDays} dias de descanso bem gerenciados — recuperação é onde a melhora acontece.`);
-      else if(restDays===1) L.push(`⚠️ Apenas 1 dia de descanso — monitore sinais de fadiga (ritmo cardíaco elevado ao acordar, falta de motivação).`);
-      else L.push(`🚨 Nenhum dia de descanso registrado. Inclua pelo menos 1–2 dias de recuperação para evitar overtraining.`);
-    }
-    return{title:"Análise · Semana Atual",lines:L};
-  }
-
-  if(period==="anterior"){
-    const L=[];
-    const ativos=prev.days.filter(d=>d.acts.length>0).length;
-    const descanso=7-ativos;
-    if(prev.runs.length===0){
-      L.push("😴 Semana sem corridas — pode ter sido intencional (recuperação) ou circunstâncias externas.");
-      if(curr.runs.length>0) L.push("✅ Bom que você voltou aos treinos na semana atual!");
-    } else {
-      L.push(`📊 Semana com ${prev.runs.length} corrida${prev.runs.length>1?"s":""}, ${prev.kmTotal.toFixed(1)} km e ${ativos} dias ativos.`);
-      if(curr.kmTotal>0){
-        const diff=curr.kmTotal-prev.kmTotal;
-        const pct=Math.round(Math.abs(diff)/Math.max(prev.kmTotal,0.1)*100);
-        if(diff>0.3) L.push(`📈 A semana atual está ${pct}% acima em volume — progressão positiva de carga.`);
-        else if(diff<-0.3) L.push(`📉 A semana atual tem ${pct}% menos volume — possível semana de recuperação ativa.`);
-        else L.push("➡️ Volume similar ao da semana atual — treino em bloco estável.");
-      }
-      if(prev.avgSpd>0&&curr.avgSpd>0){
-        const d=paceN(curr.avgSpd)-paceN(prev.avgSpd);
-        if(d<-0.05) L.push(`⚡ Ritmo melhorou de ${pace(prev.avgSpd)}/km para ${pace(curr.avgSpd)}/km — tendência positiva.`);
-        else if(d>0.08) L.push(`🔄 Ritmo mais conservador na semana atual — verifique se é recuperação planejada.`);
-        else L.push(`✅ Ritmo consistente entre as duas semanas — boa estabilidade de desempenho.`);
-      }
-      if(descanso>=2) L.push(`😴 ${descanso} dias de descanso — distribuição equilibrada de carga e recuperação.`);
-      else if(descanso===1) L.push("⚠️ Apenas 1 dia de descanso na semana anterior — verifique como se sentiu ao longo da semana.");
-      if(prev.effort>0) L.push(`💪 Esforço relativo de ${prev.effort} pontos — ${prev.effort>150?"semana exigente":"carga moderada e gerenciável"}.`);
-    }
-    return{title:"Análise · Semana Anterior",lines:L};
-  }
-
-  if(period==="meses"&&sixM){
-    const L=[];
-    const{streak,monthlyData,firstPaceStr,lastPaceStr,paceImprove,biggestKm,biggestDate,hrZones,runCount,totalKm}=sixM;
-    const firstM=monthlyData[0],lastM=monthlyData[monthlyData.length-1];
-    if(paceImprove>0.1){
-      L.push(`🚀 O número mais importante: seu ritmo saiu de ${firstPaceStr}/km para ${lastPaceStr}/km — ${paceS(paceImprove)} min/km de melhora em ${monthlyData.length} meses. Para um iniciante, isso é acima da curva.`);
-    }
-    L.push(`🔥 ${streak} semanas consecutivas sem uma semana em branco. Isso é o que separa atletas que evoluem dos que ficam no mesmo lugar — você acertou no mais difícil.`);
-    if(firstM&&lastM&&lastM.corridas>firstM.corridas){
-      L.push(`📅 Frequência aumentou de ${firstM.corridas} para ${lastM.corridas} corridas/mês. Passou de corridas longas e espaçadas para curtas e frequentes — exatamente o modelo ideal para fase de construção de base.`);
-    }
-    if(firstM&&lastM&&lastM.km>firstM.km*1.1){
-      L.push(`📈 Volume mensal cresceu ${Math.round((lastM.km/firstM.km-1)*100)}% (${firstM.km} → ${lastM.km} km/mês) com progressão gradual — risco de lesão bem gerenciado.`);
-    }
-    L.push(`🏆 Maior corrida: ${biggestKm} km em ${biggestDate}. O único gap hoje é resistência para distâncias maiores — inclua 1 corrida longa semanal (6–7 km) para ampliar essa marca.`);
-    if(hrZones){
-      const z2=hrZones.find(z=>z.name.includes("Z2"));
-      const z3=hrZones.find(z=>z.name.includes("Z3"));
-      const z4=hrZones.find(z=>z.name.includes("Z4"));
-      if(z2&&z2.pct>0) L.push(`❤️ ${z2.pct}% do tempo em Z2 Aeróbico${z3&&z3.pct>0?`, ${z3.pct}% em Z3 Tempo`:""} — distribuição adequada para construção de base aeróbica.`);
-      if(z4&&z4.pct>30) L.push(`⚠️ ${z4.pct}% do tempo no Limiar (Z4). Alta intensidade pode acelerar a melhora de ritmo, mas eleve o volume de Z2 para sustentar a progressão.`);
-    }
-    L.push(`🎯 Próximo alvo: 8:00/km — com a progressão atual, é factível nos próximos 4–6 semanas. Acrescente 1 corrida longa semanal (começando com 6 km aos sábados, progressivo) e o 10K em agosto se torna realista.`);
-    return{title:"Análise dos 6 Meses",lines:L};
-  }
-  return{title:"",lines:[]};
-}
-
 /* ── SVG CHARTS ── */
-function LineChart({data,dataKey,color,height=110,inverted=false}){
-  const vals=data.map(d=>d[dataKey]).filter(v=>v!=null&&v>0);
-  if(vals.length<2)return null;
-  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||0.01;
-  const W=300,H=height,p=10;
-  const pts=data.filter(d=>d[dataKey]>0).map((d,i,a)=>({
-    x:p+(i/Math.max(a.length-1,1))*(W-p*2),
-    y:inverted?p+((d[dataKey]-mn)/rng)*(H-p*2):H-p-((d[dataKey]-mn)/rng)*(H-p*2),
-    v:d[dataKey],label:d.label
+function LineChart({data,dataKey,color,h:H=120,reversed=false,fmtY}){
+  const vals=data.map(d=>d[dataKey]).filter(v=>v!=null);
+  if(!vals.length)return null;
+  let min=Math.min(...vals),max=Math.max(...vals);
+  const range=max-min||1;
+  const W=320,pad=10;
+  const pts=data.filter(d=>d[dataKey]!=null).map((d,i,arr)=>({
+    x:pad+(i/Math.max(arr.length-1,1))*(W-pad*2),
+    y:reversed
+      ?(pad+((d[dataKey]-min)/range)*(H-pad*2-14))
+      :(H-14-pad-((d[dataKey]-min)/range)*(H-pad*2-14)),
+    v:d[dataKey],lbl:d.label
   }));
-  const path=pts.map((pt,i)=>`${i===0?"M":"L"}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(" ");
-  const area=`${path} L${pts[pts.length-1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
-  const id="g"+dataKey.replace(/\W/g,"");
+  const path=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const area=pts.length>1?(path+` L${pts[pts.length-1].x.toFixed(1)},${H-14} L${pts[0].x.toFixed(1)},${H-14} Z`):null;
+  const gid="g"+dataKey+Math.random().toString(36).slice(2,6);
+  const lblStep=Math.max(1,Math.ceil(pts.length/5));
   return h("svg",{viewBox:`0 0 ${W} ${H}`,style:{width:"100%",height:H}},
-    h("defs",null,h("linearGradient",{id,x1:"0",y1:"0",x2:"0",y2:"1"},
-      h("stop",{offset:"0%",stopColor:color,stopOpacity:0.35}),
+    h("defs",null,h("linearGradient",{id:gid,x1:"0",y1:"0",x2:"0",y2:"1"},
+      h("stop",{offset:"0%",stopColor:color,stopOpacity:0.25}),
       h("stop",{offset:"100%",stopColor:color,stopOpacity:0})
     )),
-    h("path",{d:area,fill:`url(#${id})`}),
-    h("path",{d:path,fill:"none",stroke:color,strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}),
-    pts.map((pt,i)=>h("circle",{key:i,cx:pt.x,cy:pt.y,r:3.5,fill:color,stroke:"#1A1A1A",strokeWidth:1.5})),
-    pts.filter((_,i)=>i===0||i===pts.length-1||i%Math.ceil(pts.length/4)===0).map((pt,i)=>
-      h("text",{key:i,x:pt.x,y:H,textAnchor:"middle",fontSize:8,fill:T.muted},pt.label)
+    area&&h("path",{d:area,fill:`url(#${gid})`}),
+    h("path",{d:path,fill:"none",stroke:color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}),
+    pts.map((p,i)=>h("circle",{key:i,cx:p.x,cy:p.y,r:3,fill:color})),
+    pts.filter((_,i)=>i%lblStep===0||i===pts.length-1).map((p,i)=>
+      h("text",{key:i,x:p.x,y:H,textAnchor:"middle",fontSize:9,fill:T.muted},p.lbl)
     )
   );
 }
 
-function BarChart({data,dataKey,color,height=85}){
+function BarChart({data,dataKey,color,h:H=100}){
   const vals=data.map(d=>d[dataKey]||0);
-  const mx=Math.max(...vals)||1;
-  const W=300,H=height,p=10;
-  const bw=Math.max(8,Math.min(24,(W-p*2)/data.length-4));
+  const max=Math.max(...vals,1);
+  const W=320,pad=10,n=data.length;
+  const bw=Math.min(24,(W-pad*2)/n-4);
+  const lblStep=Math.max(1,Math.ceil(n/5));
   return h("svg",{viewBox:`0 0 ${W} ${H}`,style:{width:"100%",height:H}},
     data.map((d,i)=>{
-      const x=p+(i/data.length)*(W-p*2)+bw*0.25;
-      const bh=Math.max(2,((d[dataKey]||0)/mx)*(H-18));
+      const x=pad+(i/(n))*(W-pad*2)+bw*0.2;
+      const bh=((d[dataKey]||0)/max)*(H-18);
       return h("g",{key:i},
-        h("rect",{x,y:H-16-bh,width:bw,height:bh,fill:color,rx:3,opacity:0.9}),
-        (i===0||i===data.length-1||i%Math.ceil(data.length/4)===0)&&
-          h("text",{x:x+bw/2,y:H,textAnchor:"middle",fontSize:8,fill:T.muted},d.label)
+        h("rect",{x,y:H-16-bh,width:bw,height:Math.max(bh,1),fill:color,rx:3,opacity:0.85}),
+        (i%lblStep===0||i===n-1)&&h("text",{x:x+bw/2,y:H,textAnchor:"middle",fontSize:9,fill:T.muted},d.label)
       );
     })
   );
 }
 
-function HRZones({zones}){
-  if(!zones||!zones.some(z=>z.pct>0))return null;
+function HRZonesChart({pct,ranges}){
+  if(!pct||!ranges)return h("div",{style:{color:T.muted,fontSize:12,padding:"12px 0"}},"Dados de zonas não disponíveis");
+  const colors=[T.z1,T.z2,T.z3,T.z4,T.z5];
+  const labels=["Z1","Z2","Z3","Z4","Z5"];
+  const bpmLabels=ranges.map(({min,max},i)=>i===ranges.length-1?`>${min} bpm`:`${min}–${max} bpm`);
+  const dominantZone=pct.indexOf(Math.max(...pct));
   return h("div",null,
-    h("div",{style:{display:"flex",borderRadius:8,overflow:"hidden",height:10,marginBottom:14,gap:2}},
-      zones.filter(z=>z.pct>0).map((z,i)=>
-        h("div",{key:i,style:{flex:z.pct,background:z.color,minWidth:z.pct>0?4:0,borderRadius:3}})
+    h("div",{style:{fontSize:13,fontWeight:600,color:T.text,marginBottom:12}},
+      `${pct[dominantZone]}% em Zona ${dominantZone+1}`,
+      h("span",{style:{fontSize:11,color:T.muted,fontWeight:400,marginLeft:8}},
+        `(${bpmLabels[dominantZone]})`
       )
     ),
-    zones.map((z,i)=>
-      h("div",{key:i,style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}},
-        h("div",{style:{display:"flex",alignItems:"center",gap:8}},
-          h("div",{style:{width:8,height:8,borderRadius:2,background:z.color,flexShrink:0}}),
-          h("span",{style:{fontSize:12,color:T.muted}},z.name)
-        ),
-        h("div",{style:{fontSize:12,fontWeight:600,color:T.text}},
-          z.pct>0?`${z.pct}% · ${z.minutes} min`:"—")
+    h("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+      [4,3,2,1,0].map(i=>
+        h("div",{key:i,style:{display:"flex",alignItems:"center",gap:8}},
+          h("div",{style:{width:24,fontSize:11,color:T.muted,fontWeight:600,flexShrink:0}},labels[i]),
+          h("div",{style:{flex:1,background:"#222",borderRadius:4,height:18,position:"relative",overflow:"hidden"}},
+            h("div",{style:{width:`${Math.max(pct[i],1)}%`,height:"100%",background:colors[i],borderRadius:4,transition:"width 0.6s ease"}})
+          ),
+          h("div",{style:{width:36,fontSize:12,fontWeight:700,color:pct[i]>20?colors[i]:T.muted,textAlign:"right",flexShrink:0}},`${pct[i]}%`),
+          h("div",{style:{width:80,fontSize:10,color:T.muted,textAlign:"right",flexShrink:0}},bpmLabels[i])
+        )
       )
     )
   );
 }
 
-/* ── UI ── */
-const crd=(x={})=>({background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:16,...x});
-const crdW=(x={})=>({background:T.cardWarm,border:`1px solid ${T.borderOr}`,borderRadius:16,padding:16,...x});
+/* ── UI COMPONENTS ── */
+const card=(extra={})=>({background:T.card,border:`1px solid ${T.border}`,borderRadius:14,...extra});
 
-function MetCard({value,unit,label,sub,badge,bColor=T.orange,bBg,hi=false}){
-  return h("div",{style:hi?crdW({border:`1px solid ${T.orange}55`}):crd()},
-    h("div",{style:{fontSize:9,color:T.muted,letterSpacing:1.8,textTransform:"uppercase",marginBottom:8}},label),
-    h("div",{style:{display:"flex",alignItems:"baseline",gap:4,marginBottom:4}},
-      h("span",{className:"syne",style:{fontSize:36,color:hi?T.orange:T.text,lineHeight:1}},value),
-      unit&&h("span",{style:{fontSize:12,color:T.muted}},unit)
+function StatChip({val,label,color=T.text,sub}){
+  return h("div",{style:{...card(),padding:"14px 12px",textAlign:"center"}},
+    h("div",{className:"syne",style:{fontSize:28,color,lineHeight:1}},val),
+    h("div",{style:{fontSize:10,color:T.muted,marginTop:4,textTransform:"uppercase",letterSpacing:1}},label),
+    sub&&h("div",{style:{fontSize:10,color:T.muted,marginTop:2}},sub)
+  );
+}
+
+function Badge({children,color=T.orange,bg}){
+  return h("span",{style:{display:"inline-block",padding:"3px 10px",borderRadius:100,
+    background:bg||color+"22",color,fontSize:10,fontWeight:700}},children);
+}
+
+function Sec({children,mt=20}){
+  return h("div",{className:"syne",style:{fontSize:10,color:T.muted,letterSpacing:2,
+    textTransform:"uppercase",margin:`${mt}px 0 10px`}},children);
+}
+
+function AnalysisCard({data}){
+  if(!data)return null;
+  return h("div",{style:{...card(),padding:16,borderLeft:`3px solid ${T.orange}`,marginTop:4}},
+    data.intro&&h("div",{style:{fontSize:13,lineHeight:1.7,color:T.text,marginBottom:12}},
+      data.intro
     ),
-    sub&&h("div",{style:{fontSize:11,color:T.muted,marginBottom:6}},sub),
-    badge&&h("div",{style:{display:"inline-block",padding:"3px 10px",borderRadius:100,
-      background:bBg||bColor+"22",color:bColor,fontSize:10,fontWeight:600}},badge)
-  );
-}
-
-function CCard({title,sub,children}){
-  return h("div",{style:crd()},
-    h("div",{style:{fontSize:13,fontWeight:600,marginBottom:sub?2:12}},title),
-    sub&&h("div",{style:{fontSize:10,color:T.muted,marginBottom:12}},sub),
-    children
-  );
-}
-
-function Sec({t}){
-  return h("div",{className:"syne",style:{fontSize:9,color:T.muted,letterSpacing:2.5,
-    textTransform:"uppercase",padding:"20px 0 10px"}},t);
-}
-
-function AnalCard({a}){
-  if(!a||!a.lines.length)return null;
-  return h("div",{style:{background:"#111",border:`1px solid #222`,borderRadius:16,padding:18}},
-    h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:14}},
-      h("span",{style:{fontSize:18}},"🧠"),
-      h("span",{className:"syne",style:{fontSize:10,color:T.muted,letterSpacing:2.5}},a.title.toUpperCase())
+    data.points&&h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+      data.points.map((p,i)=>
+        h("div",{key:i},
+          typeof p==="string"
+            ?h("div",{style:{fontSize:12,color:"#CCC",lineHeight:1.65}},p)
+            :h("div",null,
+              h("div",{style:{fontSize:12,fontWeight:700,color:T.orange,marginBottom:2}},
+                `${p.icon||""} ${p.title}`
+              ),
+              h("div",{style:{fontSize:12,color:"#CCC",lineHeight:1.65}},p.text)
+            )
+        )
+      )
     ),
-    a.lines.map((line,i)=>
-      h("div",{key:i,style:{fontSize:13,color:"rgba(240,240,240,0.85)",lineHeight:1.75,
-        paddingBottom:i<a.lines.length-1?12:0,marginBottom:i<a.lines.length-1?12:0,
-        borderBottom:i<a.lines.length-1?`1px solid #1F1F1F`:"none"}},line)
-    )
+    data.conclusion&&h("div",{style:{fontSize:12,color:T.green,marginTop:10,paddingTop:10,
+      borderTop:`1px solid ${T.border}`,fontWeight:600}},
+      "→ "+data.conclusion
+    ),
+    data.headline&&!data.intro&&h("div",{style:{fontSize:12,color:T.muted}},data.headline)
   );
 }
 
-/* ── WEEK GRID ── */
-function WeekGrid({wk}){
-  return h("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}},
-    wk.days.map(({date,acts:da},i)=>{
-      const run=da.find(a=>isRun(a.type));
-      const gym=da.find(a=>isGym(a.type));
-      const rest=da.length===0;
-      const isToday=new Date().toDateString()===date.toDateString();
-      const isBest=run&&wk.bestRun&&run.id===wk.bestRun.id;
+function DayGrid({days}){
+  return h("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6}},
+    days.map(({date,acts:dActs},i)=>{
+      const runA=dActs.find(a=>isRun(a.type));
+      const gymA=dActs.find(a=>isGym(a.type));
+      const rest=dActs.length===0;
+      const isPR=runA&&runA.suffer_score>85;
       return h("div",{key:i,style:{
-        background:run?T.cardWarm:gym?T.cardBlue:T.card,
-        border:`1.5px solid ${run?T.orange:gym?T.blue:isToday?"#444":T.border}`,
-        borderRadius:13,padding:"8px 5px",textAlign:"center",minHeight:96,
+        background:T.card2,
+        border:`2px solid ${runA?T.orange:gymA?T.blue:T.border}`,
+        borderRadius:12,padding:"8px 4px",textAlign:"center",minHeight:100
       }},
         h("div",{style:{fontSize:9,fontWeight:700,letterSpacing:0.5,
-          color:run?T.orange:gym?T.blue:T.muted}},DAYS[date.getDay()]),
-        h("div",{style:{fontSize:8,color:T.muted,marginBottom:5}},
+          color:runA?T.orange:gymA?T.blue:T.muted}},DAYS[date.getDay()]),
+        h("div",{style:{fontSize:8,color:T.muted,marginBottom:4}},
           `${String(date.getDate()).padStart(2,"0")}/${String(date.getMonth()+1).padStart(2,"0")}`),
-        run&&h(React.Fragment,null,
-          h("div",{style:{fontSize:20,marginBottom:2}},"🏃"),
-          h("div",{style:{fontSize:10,fontWeight:700,color:T.text}},(run.distance/1000).toFixed(1)+" km"),
-          h("div",{style:{fontSize:9,color:T.orange}},pace(run.average_speed)+"/km"),
-          run.has_heartrate&&run.average_heartrate&&
-            h("div",{style:{fontSize:9,color:T.muted}},Math.round(run.average_heartrate)+"bpm"),
-          isBest&&h("div",{style:{display:"inline-block",background:T.orange,borderRadius:100,
-            padding:"2px 6px",fontSize:8,fontWeight:700,color:"#fff",marginTop:3}},"🥇 RP")
-        ),
-        !run&&gym&&h(React.Fragment,null,
-          h("div",{style:{fontSize:20,marginBottom:2}},"🏋️"),
-          h("div",{style:{fontSize:9,color:T.blue,fontWeight:600}},"Musculação")
-        ),
-        rest&&h(React.Fragment,null,
-          h("div",{style:{fontSize:20,marginBottom:2}},"😴"),
-          h("div",{style:{fontSize:8,color:T.muted}},"Descanso")
+        runA?h(Fragment,null,
+          h("div",{style:{fontSize:18,marginBottom:2}},"🏃"),
+          h("div",{className:"syne",style:{fontSize:14,color:T.text,lineHeight:1.1}},
+            (runA.distance/1000).toFixed(1)),
+          h("div",{style:{fontSize:8,color:T.muted}},`km`),
+          h("div",{style:{fontSize:8,color:T.orange,margin:"2px 0"}},paceMs(runA.average_speed)+"/km"),
+          runA.has_heartrate&&h("div",{style:{fontSize:8,color:T.muted}},
+            Math.round(runA.average_heartrate)+"bpm"),
+          isPR&&h("div",{style:{display:"inline-block",marginTop:3,padding:"2px 5px",borderRadius:100,
+            background:T.orange,color:"#fff",fontSize:8,fontWeight:700}},"🏅 RP")
+        ):gymA?h(Fragment,null,
+          h("div",{style:{fontSize:18,marginBottom:4}},"🏋️"),
+          h("div",{style:{fontSize:9,color:T.muted}},gymA.name||"Musculação")
+        ):h(Fragment,null,
+          h("div",{style:{fontSize:18,marginBottom:4}},"😴"),
+          h("div",{style:{fontSize:9,color:T.muted}},"Descanso")
         )
       );
     })
   );
 }
 
-/* ── WEEK SUMMARY CARDS ── */
-function WeekStats({wk,label}){
-  return h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-    h(MetCard,{value:wk.kmTotal.toFixed(1),unit:"km",label:"Total de km",
-      sub:`${wk.runs.length} corrida${wk.runs.length!==1?"s":""}`,hi:wk.kmTotal>0}),
-    h(MetCard,{value:wk.avgSpd?pace(wk.avgSpd):"—",unit:wk.avgSpd?"/km":"",
-      label:"Pace Médio",sub:label||"esta semana"}),
-    wk.avgHR&&h(MetCard,{value:wk.avgHR,unit:"bpm",label:"FC Média",
-      badge:"Zona aeróbica",bColor:T.blue,bBg:T.blue+"18"}),
-    wk.effort>0&&h(MetCard,{value:wk.effort,label:"Esforço Relativo",
-      badge:"Suffer score",bColor:T.yellow,bBg:T.yellow+"18"}),
-    wk.elevGain>10&&h(MetCard,{value:Math.round(wk.elevGain),unit:"m",label:"Elevação Total"})
+function WeekView({acts,offset,prevActs,zoneRanges}){
+  const weekActs=useMemo(()=>getWeekActs(acts,offset),[acts,offset]);
+  const prev=useMemo(()=>prevActs||getWeekActs(acts,offset+1),[acts,offset,prevActs]);
+  const days=useMemo(()=>getWeekDays(acts,offset),[acts,offset]);
+  const runs=weekActs.filter(a=>isRun(a.type));
+  const pRuns=prev.filter(a=>isRun(a.type));
+  const totalKm=runs.reduce((s,r)=>s+r.distance/1000,0);
+  const avgPace=runs.length?runs.reduce((s,r)=>s+r.average_speed,0)/runs.length:0;
+  const avgHRruns=runs.filter(r=>r.has_heartrate);
+  const avgHR=avgHRruns.length?Math.round(avgHRruns.reduce((s,r)=>s+r.average_heartrate,0)/avgHRruns.length):null;
+  const effort=runs.reduce((s,r)=>s+(r.suffer_score||0),0);
+  const pKm=pRuns.reduce((s,r)=>s+r.distance/1000,0);
+  const kmChg=pKm>0?((totalKm-pKm)/pKm*100):null;
+  const analysis=useMemo(()=>analyzeWeek(weekActs,prev,offset===0),[weekActs,prev,offset]);
+  const zonePct=useMemo(()=>aggregateZones(weekActs,zoneRanges),[weekActs,zoneRanges]);
+
+  return h("div",null,
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}},
+      h(StatChip,{val:totalKm.toFixed(1),label:"km total",color:T.orange,
+        sub:kmChg!=null?`${kmChg>=0?"+":""}${kmChg.toFixed(0)}% vs ant.`:null}),
+      h(StatChip,{val:avgPace?paceMs(avgPace):"--",label:"pace médio"}),
+      h(StatChip,{val:runs.length,label:"corridas"}),
+      h(StatChip,{val:avgHR||"--",label:"fc média",color:avgHR?T.blue:T.muted,sub:avgHR?"bpm":null})
+    ),
+
+    h(Sec,null,"Análise do Coach"),
+    h(AnalysisCard,{data:analysis}),
+
+    h(Sec,null,"Dias da Semana"),
+    h(DayGrid,{days}),
+
+    runs.length>0&&h(Fragment,null,
+      h(Sec,null,"Pace por Corrida"),
+      h("div",{style:card({padding:14})},
+        h(LineChart,{
+          data:runs.slice().reverse().map((r,i)=>({label:fmtDay(r.start_date),pace:paceN(r.average_speed)})),
+          dataKey:"pace",color:T.orange,h:110,reversed:true
+        }),
+        h("div",{style:{fontSize:10,color:T.muted,textAlign:"center",marginTop:4}},"menor = mais rápido")
+      ),
+
+      h(Sec,null,"Zonas de Frequência Cardíaca"),
+      h("div",{style:card({padding:14})},
+        h(HRZonesChart,{pct:zonePct,ranges:zoneRanges})
+      )
+    )
   );
 }
 
-/* ── SPLASH / ERROR ── */
+function SixMonthView({acts,stats,zoneRanges}){
+  const since=useMemo(()=>{const d=new Date();d.setMonth(d.getMonth()-6);return d;},[]);
+  const recent=useMemo(()=>acts.filter(a=>new Date(a.start_date)>=since),[acts,since]);
+  const runs=recent.filter(a=>isRun(a.type));
+  const monthly=useMemo(()=>buildMonthly(recent),[recent]);
+  const streak=useMemo(()=>calcStreak(acts),[acts]);
+  const totalKm=+(runs.reduce((s,r)=>s+r.distance/1000,0)).toFixed(0);
+  const biggest=runs.length?[...runs].sort((a,b)=>b.distance-a.distance)[0]:null;
+  const biggestKm=biggest?+(biggest.distance/1000).toFixed(1):0;
+  const analysis=useMemo(()=>analyzeSixMonths(monthly,totalKm,runs.length,streak,biggestKm,recent),[monthly,totalKm,runs.length,streak,biggestKm]);
+  const zonePct=useMemo(()=>aggregateZones(recent,zoneRanges),[recent,zoneRanges]);
+  const ytd=stats?.ytd_run_totals;
+
+  return h("div",null,
+    // YTD Stats
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}},
+      h(StatChip,{val:totalKm,label:"km totais",color:T.orange,sub:`${runs.length} corridas`}),
+      h(StatChip,{val:paceMs(runs.length?runs.reduce((s,r)=>s+r.average_speed,0)/runs.length:0),label:"pace médio"}),
+      h(StatChip,{val:streak,label:"semanas seguidas",color:T.orange}),
+      h(StatChip,{val:biggestKm,label:"maior corrida",sub:"km"})
+    ),
+
+    // Streak bar
+    h("div",{style:{...card({padding:16}),background:T.orangeDim,border:`1px solid ${T.orangeBorder}`,marginTop:8}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+        h("span",{style:{fontSize:20}},"🔥"),
+        h("div",{className:"syne",style:{fontSize:18,color:T.text}},
+          h("span",{style:{color:T.orange}},streak)," semanas consecutivas"
+        )
+      ),
+      h("div",{style:{fontSize:11,color:T.muted,marginBottom:10}},
+        `Meta de 52 semanas — ${Math.round(streak/52*100)}% concluído · ${52-streak} restantes`),
+      h("div",{style:{background:"#333",borderRadius:100,height:6}},
+        h("div",{style:{background:T.orange,borderRadius:100,height:6,width:`${Math.min(streak/52*100,100)}%`}})
+      )
+    ),
+
+    h(Sec,null,"Análise dos 6 Meses"),
+    h(AnalysisCard,{data:analysis}),
+
+    monthly.length>1&&h(Fragment,null,
+      h(Sec,null,"Ritmo Médio por Mês"),
+      h("div",{style:card({padding:14})},
+        h("div",{style:{fontSize:10,color:T.muted,marginBottom:8}},"min/km — menor = mais rápido"),
+        h(LineChart,{data:monthly,dataKey:"pace",color:T.orange,h:120,reversed:true})
+      ),
+
+      h(Sec,null,"Volume Mensal (km)"),
+      h("div",{style:card({padding:14})},
+        h(BarChart,{data:monthly,dataKey:"km",color:T.orange,h:100})
+      ),
+
+      h(Sec,null,"Frequência de Corridas"),
+      h("div",{style:card({padding:14})},
+        h(BarChart,{data:monthly,dataKey:"corridas",color:"#888",h:85})
+      ),
+
+      monthly.some(m=>m.hr)&&h(Fragment,null,
+        h(Sec,null,"FC Média por Mês"),
+        h("div",{style:card({padding:14})},
+          h("div",{style:{fontSize:10,color:T.muted,marginBottom:8}},"tendência de adaptação cardiovascular"),
+          h(LineChart,{data:monthly.filter(m=>m.hr),dataKey:"hr",color:T.blue,h:110})
+        )
+      )
+    ),
+
+    h(Sec,null,"Zonas de Frequência Cardíaca · 6 Meses"),
+    h("div",{style:card({padding:14})},
+      h(HRZonesChart,{pct:zonePct,ranges:zoneRanges})
+    )
+  );
+}
+
+/* ── STRAVA AUTH & API ── */
+async function refreshTok(rt){
+  const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({client_id:CLIENT_ID,client_secret:CLIENT_SEC,refresh_token:rt,grant_type:"refresh_token"})});
+  const d=await r.json();
+  if(d.access_token){ls.set("s_tok",d);return d.access_token;}
+  throw new Error("Falha ao renovar token");
+}
+async function getToken(tok){
+  if(!tok)return null;
+  if(Date.now()/1000<(tok.expires_at||0)-60)return tok.access_token;
+  return refreshTok(tok.refresh_token);
+}
+async function apiGet(path,tok){
+  const t=await getToken(tok);if(!t)throw new Error("sem token");
+  const r=await fetch(SAPI+path,{headers:{Authorization:`Bearer ${t}`}});
+  if(!r.ok)throw new Error(`Erro ${r.status}`);return r.json();
+}
+
+/* ── SPLASH ── */
 function Splash({msg}){
   return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",
     alignItems:"center",justifyContent:"center",background:T.bg,gap:14}},
-    h("div",{style:{fontSize:54}},"🏃"),
-    h("div",{className:"syne",style:{fontSize:22,color:T.text}},"Strava Performance"),
-    h("div",{style:{fontSize:13,color:T.muted}},msg||"Carregando..."),
-    h("div",{style:{width:48,height:3,background:T.orange,borderRadius:3,marginTop:10}})
+    h("div",{style:{width:64,height:64,background:T.orange,borderRadius:16,
+      display:"flex",alignItems:"center",justifyContent:"center",
+      fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,color:"#fff"}
+    },"S"),
+    h("div",{className:"syne",style:{fontSize:18,color:T.text}},"Strava Performance"),
+    h("div",{style:{fontSize:13,color:T.muted,marginTop:4}},msg),
+    h("div",{style:{width:40,height:3,background:T.orange,borderRadius:3,marginTop:8}})
   );
 }
 
-/* ── APP ── */
+/* ── MAIN APP ── */
 function App(){
-  const[tokens,setTokens] =useState(()=>ls.get("s_tok"));
+  const[tok,setTok]=useState(()=>ls.get("s_tok"));
   const[athlete,setAthlete]=useState(null);
-  const[acts,setActs]     =useState([]);
-  const[stats,setStats]   =useState(null);
+  const[acts,setActs]=useState([]);
+  const[stats,setStats]=useState(null);
+  const[zoneRanges,setZoneRanges]=useState(null);
   const[loading,setLoading]=useState(true);
-  const[refreshing,setR]  =useState(false);
-  const[status,setStatus] =useState("Iniciando...");
-  const[error,setError]   =useState("");
-  const[tab,setTab]       =useState("atual");
-  const[updated,setUpdated]=useState(null);
+  const[status,setStatus]=useState("Iniciando...");
+  const[error,setError]=useState("");
+  const[tab,setTab]=useState("atual"); // atual | anterior | meses
+  const[refreshing,setRefreshing]=useState(false);
+  const[lastUpdate,setLastUpdate]=useState(null);
 
-  const getToken=async tok=>{
-    const t=tok||tokens;if(!t)return null;
-    if(Date.now()/1000<(t.expires_at||0)-60)return t.access_token;
-    const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({client_id:CLIENT_ID,client_secret:CLIENT_SEC,
-        refresh_token:t.refresh_token,grant_type:"refresh_token"})});
-    const d=await r.json();
-    if(d.access_token){ls.set("s_tok",d);setTokens(d);return d.access_token;}
-    throw new Error("Falha ao renovar token");
-  };
+  const loadData=useCallback(async(token)=>{
+    const t=token||tok;
+    setStatus("Carregando atividades...");
+    const[ath,activities,st,zones]=await Promise.all([
+      apiGet("/athlete",t),
+      apiGet("/athlete/activities?per_page=200",t),
+      apiGet(`/athletes/${(await apiGet("/athlete",t)).id}/stats`,t).catch(()=>null),
+      apiGet("/athlete/zones",t).catch(()=>null)
+    ]);
+    // Actually refetch to avoid double /athlete call
+    const ath2=await apiGet("/athlete",t);
+    const acts2=await apiGet("/athlete/activities?per_page=200",t);
+    const st2=await apiGet(`/athletes/${ath2.id}/stats`,t).catch(()=>null);
+    const z2=await apiGet("/athlete/zones",t).catch(()=>null);
+    setAthlete(ath2);setActs(acts2);setStats(st2);
+    if(z2?.heart_rate?.zones)setZoneRanges(z2.heart_rate.zones);
+    setLastUpdate(new Date());
+  },[tok]);
 
-  const api=async(path,tok)=>{
-    const t=await getToken(tok);if(!t)throw new Error("sem token");
-    const r=await fetch(SAPI+path,{headers:{Authorization:`Bearer ${t}`}});
-    if(!r.ok)throw new Error(`Erro ${r.status}`);return r.json();
-  };
-
-  const loadData=async tok=>{
-    setStatus("Carregando seus treinos...");
-    const[ath,activities]=await Promise.all([api("/athlete",tok),api("/athlete/activities?per_page=200",tok)]);
+  const fastLoad=useCallback(async(t)=>{
+    const[ath,activities]=await Promise.all([
+      apiGet("/athlete",t),
+      apiGet("/athlete/activities?per_page=200",t)
+    ]);
     setAthlete(ath);setActs(activities);
-    const st=await api(`/athletes/${ath.id}/stats`,tok);
-    setStats(st);setUpdated(new Date());
-  };
+    const[st,z]=await Promise.all([
+      apiGet(`/athletes/${ath.id}/stats`,t).catch(()=>null),
+      apiGet("/athlete/zones",t).catch(()=>null)
+    ]);
+    setStats(st);
+    if(z?.heart_rate?.zones)setZoneRanges(z.heart_rate.zones);
+    setLastUpdate(new Date());
+  },[]);
 
   useEffect(()=>{
     (async()=>{
-      const p=new URLSearchParams(window.location.search),code=p.get("code");
+      // Handle OAuth callback
+      const p=new URLSearchParams(window.location.search);
+      const code=p.get("code");
       if(code){
         window.history.replaceState({},"",window.location.pathname);
-        setStatus("Autorizando com Strava...");
+        setStatus("Autorizando com o Strava...");
         try{
           const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({client_id:CLIENT_ID,client_secret:CLIENT_SEC,code,grant_type:"authorization_code"})});
           const d=await r.json();
           if(!d.access_token)throw new Error(d.message||"Token inválido");
-          ls.set("s_tok",d);setTokens(d);await loadData(d);setLoading(false);return;
+          ls.set("s_tok",d);setTok(d);
+          setStatus("Carregando seus treinos...");
+          await fastLoad(d);
+          setLoading(false);return;
         }catch(e){setError(e.message);setLoading(false);return;}
       }
+      // Use saved token
       const saved=ls.get("s_tok");
-      if(saved){try{await loadData(saved);setLoading(false);return;}catch{ls.del("s_tok");}}
-      setStatus("Redirecionando para o Strava...");
-      await new Promise(r=>setTimeout(r,700));
+      if(saved){
+        setStatus("Conectando ao Strava...");
+        try{await fastLoad(saved);setLoading(false);return;}
+        catch(e){ls.del("s_tok");}
+      }
+      // Redirect to Strava
+      setStatus("Abrindo o Strava...");
+      await new Promise(r=>setTimeout(r,600));
       window.location.href=`${SAUTH}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`;
     })();
   },[]);
 
-  const curr=useMemo(()=>compWeek(acts,0),[acts]);
-  const prev=useMemo(()=>compWeek(acts,1),[acts]);
-  const sixM=useMemo(()=>comp6M(acts,stats),[acts,stats]);
-  const aC=useMemo(()=>genAnalysis("atual",{curr,prev,sixM}),[curr,prev,sixM]);
-  const aP=useMemo(()=>genAnalysis("anterior",{curr,prev,sixM}),[curr,prev,sixM]);
-  const a6=useMemo(()=>sixM?genAnalysis("meses",{curr,prev,sixM}):null,[curr,prev,sixM]);
-
   const handleRefresh=async()=>{
-    setR(true);setError("");
-    try{await loadData();}catch(e){setError(e.message);}
-    setR(false);
+    setRefreshing(true);
+    try{await fastLoad(tok);}catch(e){setError(e.message);}
+    setRefreshing(false);
   };
 
   if(loading&&!error)return h(Splash,{msg:status});
-  if(error&&!acts.length)return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",
-    alignItems:"center",justifyContent:"center",padding:24,gap:14,background:T.bg}},
-    h("div",{style:{fontSize:44}},"⚠️"),
-    h("div",{className:"syne",style:{fontSize:20}},"Erro de conexão"),
-    h("div",{style:{fontSize:13,color:T.muted,textAlign:"center",maxWidth:280,lineHeight:1.6}},error),
+  if(error)return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",
+    alignItems:"center",justifyContent:"center",padding:24,gap:16,background:T.bg}},
+    h("div",{style:{fontSize:40}},"⚠️"),
+    h("div",{className:"syne",style:{fontSize:18}},"Erro de conexão"),
+    h("div",{style:{fontSize:13,color:T.muted,textAlign:"center",maxWidth:300}},error),
     h("button",{onClick:()=>{ls.del("s_tok");window.location.reload();},
       style:{background:T.orange,border:"none",borderRadius:10,padding:"12px 28px",
         color:"#fff",fontSize:14,fontWeight:700,marginTop:8}},"Tentar novamente")
   );
 
-  const fmtUpd=d=>d?d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—";
-  const LABELS={atual:"Semana Atual",anterior:"Anterior","meses":"6 Meses"};
+  const updStr=lastUpdate?lastUpdate.toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—";
 
-  return h("div",{style:{background:T.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:48}},
+  return h("div",{style:{background:T.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:40}},
 
-    /* ── HEADER ── */
+    /* HEADER */
     h("div",{style:{background:"#111",borderBottom:`1px solid ${T.border}`,
-      padding:"16px 18px 14px",position:"sticky",top:0,zIndex:50}},
-      h("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:10}},
-        h("div",{style:{width:44,height:44,borderRadius:11,background:T.orange,flexShrink:0,
-          display:"flex",alignItems:"center",justifyContent:"center"}},
-          h("span",{className:"syne",style:{fontSize:20,color:"#fff",lineHeight:1}},
-            athlete?((athlete.firstname||"S")[0]+((athlete.lastname||"")[0]||"")):"S")
-        ),
-        h("div",null,
-          h("div",{className:"syne",style:{fontSize:17,lineHeight:1.2}},
+      padding:"14px 18px 12px",position:"sticky",top:0,zIndex:50}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:12}},
+        h("div",{style:{width:44,height:44,background:T.orange,borderRadius:12,flexShrink:0,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}},"S"),
+        h("div",{style:{flex:1,minWidth:0}},
+          h("div",{className:"syne",style:{fontSize:16,color:T.text,lineHeight:1.2}},
             athlete?`${athlete.firstname} ${athlete.lastname}`:"—"),
-          h("div",{style:{fontSize:11,color:T.muted,marginTop:2}},"Strava · Dashboard de Performance")
+          h("div",{style:{fontSize:11,color:T.muted}},"Strava · Dashboard de Performance")
         )
       ),
-      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between"}},
-        h("div",{style:{background:"#1A1A1A",border:`1px solid ${T.border}`,borderRadius:20,
-          padding:"4px 12px",fontSize:11,color:T.muted}},
-          "Atualizado: ",h("span",{style:{color:T.orange}},fmtUpd(updated))
+      h("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:10}},
+        h("div",{style:{background:"#1A1A1A",border:`1px solid ${T.border}`,borderRadius:8,
+          padding:"4px 10px",fontSize:11,color:T.muted}},
+          "Atualizado: ",h("span",{style:{color:T.orange,fontWeight:600}},updStr)
         ),
-        h("button",{onClick:handleRefresh,disabled:refreshing,style:{
-          background:"transparent",border:`1px solid ${T.orange}`,borderRadius:20,
-          padding:"5px 14px",fontSize:11,fontWeight:600,color:refreshing?T.muted:T.orange,
-          display:"flex",alignItems:"center",gap:5,opacity:refreshing?0.6:1}},
-          h("span",{style:{fontSize:13}},"⟳"),refreshing?"Atualizando...":"Atualizar dados"
+        h("button",{onClick:handleRefresh,disabled:refreshing,
+          style:{background:"transparent",border:`1px solid ${T.orange}`,borderRadius:8,
+            padding:"4px 12px",color:T.orange,fontSize:11,fontWeight:600,
+            opacity:refreshing?0.5:1}},
+          refreshing?"...":"⟳ Atualizar dados"
         )
       ),
-      refreshing&&h("div",{style:{height:2,background:`linear-gradient(90deg,${T.orange},transparent)`,
-        borderRadius:2,marginTop:10,opacity:0.8}})
-    ),
 
-    /* ── TABS ── */
-    h("div",{style:{display:"flex",background:"#111",borderBottom:`1px solid ${T.border}`,
-      position:"sticky",top:90,zIndex:40}},
-      ["atual","anterior","meses"].map(t=>
-        h("button",{key:t,onClick:()=>setTab(t),style:{
-          flex:1,padding:"12px 4px",background:"none",border:"none",
-          borderBottom:tab===t?`2.5px solid ${T.orange}`:"2.5px solid transparent",
-          color:tab===t?T.orange:T.muted,fontSize:10,fontWeight:700,letterSpacing:0.8,
-          textTransform:"uppercase",transition:"color 0.2s"}},LABELS[t])
+      /* TABS */
+      h("div",{style:{display:"flex",gap:4,marginTop:10}},
+        [["atual","Esta Semana"],["anterior","Semana Ant."],["meses","6 Meses"]].map(([key,lbl])=>
+          h("button",{key,onClick:()=>setTab(key),style:{
+            flex:1,padding:"7px 0",borderRadius:8,fontSize:11,fontWeight:600,border:"none",
+            background:tab===key?T.orange:"#1A1A1A",
+            color:tab===key?"#fff":T.muted,transition:"all 0.15s"
+          }},lbl)
+        )
       )
     ),
 
-    /* ── CONTENT ── */
-    h("div",{style:{padding:"0 16px"}},
-
-      /* SEMANA ATUAL */
-      tab==="atual"&&h(React.Fragment,null,
-        h("div",{style:{padding:"14px 0 8px"}},
-          h("div",{className:"syne",style:{fontSize:12,color:T.muted,letterSpacing:1}},fmtWR(0))
-        ),
-        h(WeekGrid,{wk:curr}),
-        h(Sec,{t:"Resumo"}),
-        h(WeekStats,{wk:curr}),
-        h(Sec,{t:"Análise"}),
-        h(AnalCard,{a:aC}),
-        h("div",{style:{height:8}})
+    /* CONTENT */
+    h("div",{style:{padding:"14px 14px 0"}},
+      tab!=="meses"&&h("div",{style:{fontSize:11,color:T.muted,marginBottom:10}},
+        weekLabel(tab==="atual"?0:1)
       ),
+      tab==="atual"&&h(WeekView,{acts,offset:0,zoneRanges}),
+      tab==="anterior"&&h(WeekView,{acts,offset:1,zoneRanges}),
+      tab==="meses"&&h(SixMonthView,{acts,stats,zoneRanges}),
 
-      /* SEMANA ANTERIOR */
-      tab==="anterior"&&h(React.Fragment,null,
-        h("div",{style:{padding:"14px 0 8px"}},
-          h("div",{className:"syne",style:{fontSize:12,color:T.muted,letterSpacing:1}},fmtWR(1))
-        ),
-        h(WeekGrid,{wk:prev}),
-        h(Sec,{t:"Resumo"}),
-        h(WeekStats,{wk:prev,label:"semana anterior"}),
-
-        /* Comparativo */
-        curr.kmTotal>0&&prev.kmTotal>0&&h(React.Fragment,null,
-          h(Sec,{t:"Comparativo"}),
-          h("div",{style:crd({display:"flex",alignItems:"stretch",padding:0,overflow:"hidden"})},
-            [{l:"Anterior",v:prev.kmTotal,p:pace(prev.avgSpd),wk:prev},
-             {l:"Atual",   v:curr.kmTotal,p:pace(curr.avgSpd),wk:curr}].map(({l,v,p:pg,wk},idx)=>{
-              const isWinner=idx===1?curr.kmTotal>=prev.kmTotal:prev.kmTotal>curr.kmTotal;
-              return h("div",{key:l,style:{flex:1,textAlign:"center",padding:"16px 8px",
-                borderRight:idx===0?`1px solid ${T.border}`:"none",
-                background:isWinner?T.cardWarm:"transparent"}},
-                h("div",{style:{fontSize:10,color:T.muted,letterSpacing:1,textTransform:"uppercase",marginBottom:6}},l),
-                h("div",{className:"syne",style:{fontSize:28,color:isWinner?T.orange:T.text}},v.toFixed(1)),
-                h("div",{style:{fontSize:11,color:T.muted}},"km"),
-                pg!=="--"&&h("div",{style:{fontSize:11,color:T.muted,marginTop:4}},pg+"/km")
-              );
-            })
-          )
-        ),
-        h(Sec,{t:"Análise"}),
-        h(AnalCard,{a:aP}),
-        h("div",{style:{height:8}})
-      ),
-
-      /* 6 MESES */
-      tab==="meses"&&sixM&&h(React.Fragment,null,
-
-        /* Streak */
-        h("div",{style:{background:"linear-gradient(135deg,#2A0D00,#180800)",
-          border:`1px solid ${T.orange}40`,borderRadius:16,padding:"18px 16px",
-          marginTop:16,position:"relative",overflow:"hidden"}},
-          h("div",{style:{position:"absolute",right:-8,top:-8,fontSize:60,opacity:0.12}},"🔥"),
-          h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:4}},
-            h("span",{style:{fontSize:20}},"🔥"),
-            h("span",{className:"syne",style:{fontSize:20,color:T.text}},
-              `${sixM.streak} semanas consecutivas`)
-          ),
-          h("div",{style:{fontSize:12,color:T.muted,marginBottom:12}},
-            `Meta de 52 semanas — ${Math.round(sixM.streak/52*100)}% concluído`),
-          h("div",{style:{background:"rgba(255,255,255,0.1)",borderRadius:100,height:5,marginBottom:6}},
-            h("div",{style:{background:T.orange,borderRadius:100,height:5,
-              width:`${Math.min(sixM.streak/52*100,100)}%`}})
-          ),
-          h("div",{style:{fontSize:11,color:T.muted}},`${52-sixM.streak} semanas restantes`)
-        ),
-
-        /* Métricas */
-        h(Sec,{t:"Métricas dos 6 Meses"}),
-        h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-          h(MetCard,{value:sixM.totalKm,unit:"km",label:"Total de km",
-            sub:`em ${sixM.runCount} corridas`,hi:true}),
-          h(MetCard,{value:sixM.bestPace,unit:"min/km",label:"Melhor Ritmo (PR)",
-            sub:sixM.bestPaceDate,badge:"🏅 RP no segmento"}),
-          h(MetCard,{value:sixM.paceImprove>0.05?`−${paceS(sixM.paceImprove)}`:"=",
-            unit:sixM.paceImprove>0.05?"min/km":"",label:"Evolução de Pace",
-            sub:`${sixM.firstPaceStr} → ${sixM.lastPaceStr} /km`,
-            badge:"↑ Acima da média",bColor:T.green,bBg:T.green+"18"}),
-          h(MetCard,{value:sixM.biggestKm,unit:"km",label:"Maior Corrida",
-            sub:sixM.biggestDate,badge:"Distância pessoal"})
-        ),
-
-        /* Gráficos */
-        h(Sec,{t:"Evolução ao Longo do Tempo"}),
-        h("div",{style:{display:"grid",gap:12}},
-          h(CCard,{title:"Ritmo Médio por Mês",sub:"min/km — gráfico invertido: menor é melhor"},
-            h(LineChart,{data:sixM.monthlyData,dataKey:"pace",color:T.orange,height:110,inverted:true})
-          ),
-          h(CCard,{title:"Volume Mensal (km)",sub:"Distância total acumulada por mês"},
-            h(BarChart,{data:sixM.monthlyData,dataKey:"km",color:T.orange,height:85})
-          ),
-          h(CCard,{title:"Frequência de Corridas",sub:"Número de corridas por mês"},
-            h(BarChart,{data:sixM.monthlyData,dataKey:"corridas",color:"#C0C0C0",height:75})
-          ),
-          sixM.monthlyData.some(m=>m.hr)&&h(CCard,{title:"FC Média por Mês",sub:"Adaptação cardiovascular ao longo do tempo"},
-            h(LineChart,{data:sixM.monthlyData.filter(m=>m.hr),dataKey:"hr",color:T.blue,height:110})
-          )
-        ),
-
-        /* Zonas FC */
-        h(Sec,{t:"Zonas de Frequência Cardíaca"}),
-        h("div",{style:crd()},
-          h("div",{style:{fontSize:13,fontWeight:600,marginBottom:4}},"Distribuição por Zona"),
-          h("div",{style:{fontSize:10,color:T.muted,marginBottom:16}},
-            `FC Máx: ${sixM.maxHR} bpm · ${sixM.runs.filter(r=>r.has_heartrate).length} corridas com monitor cardíaco`),
-          h(HRZones,{zones:sixM.hrZones})
-        ),
-
-        /* Análise */
-        h(Sec,{t:"Análise Completa"}),
-        h(AnalCard,{a:a6}),
-
-        h("div",{style:{marginTop:16,padding:"10px 14px",border:`1px dashed ${T.border}`,
-          borderRadius:12,fontSize:11,color:T.muted,textAlign:"center"}},
-          "📱 Safari → Compartilhar → ",h("strong",null,"Adicionar à Tela de Início")
-        ),
-        h("div",{style:{height:8}})
-      ),
-
-      tab==="meses"&&!sixM&&h("div",{style:{textAlign:"center",padding:48,color:T.muted,fontSize:13}},
-        "Sem dados suficientes para análise.")
+      h("div",{style:{marginTop:18,padding:"10px 14px",background:"#111",
+        border:`1px dashed ${T.border}`,borderRadius:10,fontSize:10,color:T.muted,textAlign:"center"}},
+        "📱 Safari → Compartilhar → Adicionar à Tela de Início"
+      )
     )
   );
 }
