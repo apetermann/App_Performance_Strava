@@ -589,52 +589,36 @@ function App(){
   const upd=updated?updated.toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—";
   const TABS=[["atual","Esta Semana"],["anterior","Semana Ant."],["meses","6 Meses"]];
 
-  return e("div",{style:{background:C.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:44}},
-    // HEADER
-    e("div",{style:{background:"#111",borderBottom:`1px solid ${C.border}`,
-      padding:"14px 18px 12px",position:"sticky",top:0,zIndex:50}},
-      e("div",{style:{display:"flex",alignItems:"center",gap:12}},
-        e("div",{style:{width:44,height:44,background:C.orange,borderRadius:12,flexShrink:0,
-          display:"flex",alignItems:"center",justifyContent:"center",
-          fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}},"S"),
-        e("div",{style:{flex:1,minWidth:0}},
-          e("div",{className:"sy",style:{fontSize:16}},athlete?`${athlete.firstname} ${athlete.lastname}`:"—"),
-          e("div",{style:{fontSize:11,color:C.muted}},"Strava · Dashboard de Performance")
-        )
-      ),
-      e("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:10}},
-        e("div",{style:{background:"#1A1A1A",border:`1px solid ${C.border}`,borderRadius:8,
-          padding:"4px 10px",fontSize:11,color:C.muted}},
-          "Atualizado: ",e("span",{style:{color:C.orange,fontWeight:600}},upd)
-        ),
-        e("button",{onClick:refresh,disabled:busy,
-          style:{background:"transparent",border:`1px solid ${C.orange}`,borderRadius:8,
-            padding:"4px 12px",color:busy?"#666":C.orange,fontSize:11,fontWeight:600,
-            borderColor:busy?"#333":C.orange}},
-          busy?"...":"⟳ Atualizar dados")
-      ),
-      // TABS
-      e("div",{style:{display:"flex",gap:4,marginTop:10}},
-        TABS.map(([k,l])=>e("button",{key:k,onClick:()=>setTab(k),style:{
-          flex:1,padding:"7px 0",borderRadius:8,fontSize:11,fontWeight:600,border:"none",
-          background:tab===k?C.orange:"#1A1A1A",color:tab===k?"#fff":C.muted}}),l))
+  const header = e("div",{style:{background:"#111",borderBottom:`1px solid ${C.border}`,padding:"14px 18px 12px",position:"sticky",top:0,zIndex:50}},
+    e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+      e("div",{style:{width:44,height:44,background:C.orange,borderRadius:12,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}},"S"),
+      e("div",{style:{flex:1,minWidth:0}},
+        e("div",{className:"sy",style:{fontSize:16}},athlete?`${athlete.firstname} ${athlete.lastname}`:"—"),
+        e("div",{style:{fontSize:11,color:C.muted}},"Strava · Dashboard de Performance")
       )
     ),
-    // CONTENT
-    e("div",{style:{padding:"12px 14px 0"}},
-      tab!=="meses"&&e("div",{style:{fontSize:11,color:C.muted,marginBottom:8}},
-        weekLabel(tab==="atual"?0:1)
+    e("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:10}},
+      e("div",{style:{background:"#1A1A1A",border:`1px solid ${C.border}`,borderRadius:8,padding:"4px 10px",fontSize:11,color:C.muted}},
+        "Atualizado: ",e("span",{style:{color:C.orange,fontWeight:600}},upd)
       ),
-      tab==="atual"&&e(WeekView,{acts,off:0,ranges}),
-      tab==="anterior"&&e(WeekView,{acts,off:1,ranges}),
-      tab==="meses"&&e(SixView,{acts,stats,ranges}),
-      e("div",{style:{marginTop:18,padding:"10px 14px",background:"#111",
-        border:`1px dashed ${C.border}`,borderRadius:10,fontSize:10,
-        color:C.muted,textAlign:"center"}},
-        "📱 Safari → Compartilhar → Adicionar à Tela de Início"
+      e("button",{onClick:refresh,disabled:busy,style:{background:"transparent",border:`1px solid ${C.orange}`,borderRadius:8,padding:"4px 12px",color:busy?"#666":C.orange,fontSize:11,fontWeight:600,borderColor:busy?"#333":C.orange}},
+        busy?"...":"⟳ Atualizar dados"
       )
+    ),
+    e("div",{style:{display:"flex",gap:4,marginTop:10}},
+      TABS.map(function(t){return e("button",{key:t[0],onClick:function(){setTab(t[0]);},style:{flex:1,padding:"7px 0",borderRadius:8,fontSize:11,fontWeight:600,border:"none",background:tab===t[0]?C.orange:"#1A1A1A",color:tab===t[0]?"#fff":C.muted}},t[1]);})
     )
   );
+  const content = e("div",{style:{padding:"12px 14px 0"}},
+    tab!=="meses"&&e("div",{style:{fontSize:11,color:C.muted,marginBottom:8}},weekLabel(tab==="atual"?0:1)),
+    tab==="atual"&&e(WeekView,{acts:acts,off:0,ranges:ranges}),
+    tab==="anterior"&&e(WeekView,{acts:acts,off:1,ranges:ranges}),
+    tab==="meses"&&e(SixView,{acts:acts,stats:stats,ranges:ranges}),
+    e("div",{style:{marginTop:18,padding:"10px 14px",background:"#111",border:`1px dashed ${C.border}`,borderRadius:10,fontSize:10,color:C.muted,textAlign:"center"}},
+      "📱 Safari → Compartilhar → Adicionar à Tela de Início"
+    )
+  );
+  return e("div",{style:{background:C.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:44}},header,content);
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(e(App));
