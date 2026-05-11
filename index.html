@@ -388,36 +388,49 @@ function analyzeSix(monthly,totalKm,count,streak,maxKm){
 }
 
 // ── SVG CHARTS ────────────────────────────────────────────────────────────────
-function lineChart(data,dKey,color,height,reversed){
+function lineChart(data,dKey,color,height,reversed,fmt){
   const pts=data.filter(d=>d[dKey]!=null);
   if(pts.length<2)return"";
   const vals=pts.map(d=>d[dKey]);
   const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
-  const W=300,P=8,IH=height-16;
-  const mapped=pts.map((d,i)=>({
-    x:P+(i/(pts.length-1))*(W-P*2),
-    y:reversed?P+((d[dKey]-mn)/rng)*IH:IH+P-((d[dKey]-mn)/rng)*IH,
-    l:d.label
-  }));
+  if(!fmt)fmt=v=>v.toFixed(1);
+  const W=300,LP=38,RP=6,PT=8,PB=16,IH=height-PT-PB;
+  const xAt=i=>LP+(i/(pts.length-1))*(W-LP-RP);
+  const yAt=v=>reversed?PT+((v-mn)/rng)*IH:PT+IH-((v-mn)/rng)*IH;
+  const mapped=pts.map((d,i)=>({x:xAt(i),y:yAt(d[dKey]),l:d.label}));
   const path=mapped.map((p,i)=>`${i?"L":"M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const area=path+` L${mapped[mapped.length-1].x.toFixed(1)},${IH+P} L${mapped[0].x.toFixed(1)},${IH+P} Z`;
-  const gid="g"+Math.random().toString(36).slice(2,8);
+  const area=path+` L${mapped[mapped.length-1].x.toFixed(1)},${PT+IH} L${mapped[0].x.toFixed(1)},${PT+IH} Z`;
+  const gid="g"+dKey+color.replace("#","");
   const step=Math.max(1,Math.ceil(mapped.length/5));
   const circles=mapped.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${color}"/>`).join("");
-  const labels=mapped.filter((_,i)=>i%step===0||i===mapped.length-1).map(p=>`<text x="${p.x.toFixed(1)}" y="${height}" text-anchor="middle" font-size="9" fill="#5A5A5A">${esc(p.l)}</text>`).join("");
-  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${circles}${labels}</svg>`;
+  const xlbls=mapped.filter((_,i)=>i%step===0||i===mapped.length-1).map(p=>`<text x="${p.x.toFixed(1)}" y="${height}" text-anchor="middle" font-size="9" fill="#5A5A5A">${esc(p.l)}</text>`).join("");
+  // Y-axis: 3 ticks (top, mid, bottom)
+  const yTickVals=reversed
+    ?[mn,(mn+mx)/2,mx]   // reversed: mn at top, mx at bottom
+    :[mx,(mn+mx)/2,mn];  // normal: mx at top, mn at bottom
+  const yTickY=[PT,PT+IH/2,PT+IH];
+  const ylbls=yTickVals.map((v,i)=>`<text x="${LP-4}" y="${(yTickY[i]+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#5A5A5A">${fmt(v)}</text>`).join("");
+  const yline=`<line x1="${LP}" y1="${PT}" x2="${LP}" y2="${PT+IH}" stroke="#282828" stroke-width="1"/>`;
+  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>${yline}<path d="${area}" fill="url(#${gid})"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${circles}${ylbls}${xlbls}</svg>`;
 }
 
-function barChart(data,dKey,color,height){
+function barChart(data,dKey,color,height,fmt){
   const vals=data.map(d=>d[dKey]||0),mx=Math.max(...vals,1);
-  const W=300,P=8,n=data.length,bw=Math.min(22,(W-P*2)/n-3);
+  if(!fmt)fmt=v=>v.toFixed(0);
+  const W=300,LP=38,RP=6,PT=6,PB=16,IH=height-PT-PB;
+  const n=data.length,bw=Math.min(20,(W-LP-RP)/n-3);
   const step=Math.max(1,Math.ceil(n/5));
   const bars=data.map((d,i)=>{
-    const x=P+(i/n)*(W-P*2)+bw*0.2,bh=((d[dKey]||0)/mx)*(height-16);
+    const x=LP+(i/n)*(W-LP-RP)+2,bh=((d[dKey]||0)/mx)*IH;
     const lbl=(i%step===0||i===n-1)?`<text x="${(x+bw/2).toFixed(1)}" y="${height}" text-anchor="middle" font-size="9" fill="#5A5A5A">${esc(d.label)}</text>`:"";
-    return`<rect x="${x.toFixed(1)}" y="${(height-14-bh).toFixed(1)}" width="${bw}" height="${Math.max(bh,1).toFixed(1)}" fill="${color}" rx="3" opacity="0.9"/>${lbl}`;
+    return`<rect x="${x.toFixed(1)}" y="${(PT+IH-bh).toFixed(1)}" width="${bw}" height="${Math.max(bh,1).toFixed(1)}" fill="${color}" rx="3" opacity="0.9"/>${lbl}`;
   }).join("");
-  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px">${bars}</svg>`;
+  // Y-axis: 3 ticks
+  const yTickVals=[mx,mx/2,0];
+  const yTickY=[PT,PT+IH/2,PT+IH];
+  const ylbls=yTickVals.map((v,i)=>`<text x="${LP-4}" y="${(yTickY[i]+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#5A5A5A">${fmt(v)}</text>`).join("");
+  const yline=`<line x1="${LP}" y1="${PT}" x2="${LP}" y2="${PT+IH}" stroke="#282828" stroke-width="1"/>`;
+  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px">${yline}${bars}${ylbls}</svg>`;
 }
 
 function zonesHtml(pct,ranges){
@@ -491,7 +504,7 @@ function renderWeek(container,offset){
   // Pace chart
   if(runs.length>1){
     const paceData=runs.slice().reverse().map(r=>({label:fmtDate(r.start_date),pace:paceN(r.average_speed)}));
-    html+=`<div class="sec">Pace por Corrida</div><div class="card" style="padding:14px">${lineChart(paceData,"pace",OR,110,false)}<p style="font-size:10px;color:#5A5A5A;text-align:center;margin-top:4px">linha descendo = melhora de ritmo</p></div>`;
+    html+=`<div class="sec">Pace por Corrida</div><div class="card" style="padding:14px">${lineChart(paceData,"pace",OR,110,false,v=>paSt(v))}<p style="font-size:10px;color:#5A5A5A;text-align:center;margin-top:4px">linha descendo = melhora de ritmo</p></div>`;
   }
 
   // Zones
@@ -537,10 +550,10 @@ function renderSix(container){
   }
 
   if(monthly.length>1){
-    html+=`<div class="sec">Ritmo Médio por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">min/km — linha descendo = melhora de ritmo</p>${lineChart(monthly,"pace",OR,115,false)}</div>`;
-    html+=`<div class="sec">Volume Mensal (km)</div><div class="card" style="padding:14px">${barChart(monthly,"km",OR,100)}</div>`;
-    html+=`<div class="sec">Frequência de Corridas</div><div class="card" style="padding:14px">${barChart(monthly,"corridas","#666",85)}</div>`;
-    if(monthly.some(m=>m.hr))html+=`<div class="sec">FC Média por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">adaptação cardiovascular</p>${lineChart(monthly.filter(m=>m.hr),"hr",BL,110,false)}</div>`;
+    html+=`<div class="sec">Ritmo Médio por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">min/km — linha descendo = melhora de ritmo</p>${lineChart(monthly,"pace",OR,115,false,v=>paSt(v))}</div>`;
+    html+=`<div class="sec">Volume Mensal (km)</div><div class="card" style="padding:14px">${barChart(monthly,"km",OR,100,v=>v.toFixed(0)+"km")}</div>`;
+    html+=`<div class="sec">Frequência de Corridas</div><div class="card" style="padding:14px">${barChart(monthly,"corridas","#666",85,v=>Math.round(v)+"")}</div>`;
+    if(monthly.some(m=>m.hr))html+=`<div class="sec">FC Média por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">adaptação cardiovascular</p>${lineChart(monthly.filter(m=>m.hr),"hr",BL,110,false,v=>Math.round(v)+"bpm")}</div>`;
   }
 
   html+=`<div class="sec">Zonas de FC · 6 Meses</div><div class="card" style="padding:14px">${zonesHtml(zpct,STATE.zones)}</div>`;
