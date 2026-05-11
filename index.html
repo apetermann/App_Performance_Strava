@@ -13,620 +13,551 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    body{background:#0C0C0C;font-family:'Inter',sans-serif;color:#F0F0F0;overscroll-behavior:none}
+    html,body{background:#0C0C0C;font-family:'Inter',sans-serif;color:#F0F0F0;overscroll-behavior:none;height:100%}
     ::-webkit-scrollbar{display:none}
+    .sy{font-family:'Syne',sans-serif;font-weight:800}
+    button,input{font-family:inherit;cursor:pointer}
+    #app{max-width:430px;margin:0 auto;min-height:100vh}
+
+    /* Splash */
+    #splash{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+    .s-avatar{width:68px;height:68px;background:#FC4C02;border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:34px;color:#fff}
+    .s-bar{width:44px;height:3px;background:#FC4C02;border-radius:3px;margin-top:4px}
+
+    /* Header */
+    #header{background:#111;border-bottom:1px solid #282828;padding:14px 18px 12px;position:sticky;top:0;z-index:50}
+    .h-row{display:flex;align-items:center;gap:12px}
+    .h-avatar{width:44px;height:44px;background:#FC4C02;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#fff}
+    .h-meta{flex:1;min-width:0}
+    .h-name{font-family:'Syne',sans-serif;font-weight:800;font-size:16px}
+    .h-sub{font-size:11px;color:#5A5A5A}
+    .h-row2{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .h-chip{background:#1A1A1A;border:1px solid #282828;border-radius:8px;padding:4px 10px;font-size:11px;color:#5A5A5A}
+    .h-chip span{color:#FC4C02;font-weight:600}
+    .h-refresh{background:transparent;border:1px solid #FC4C02;border-radius:8px;padding:4px 12px;color:#FC4C02;font-size:11px;font-weight:600}
+    .tabs{display:flex;gap:4px;margin-top:10px}
+    .tab{flex:1;padding:7px 0;border-radius:8px;font-size:11px;font-weight:600;border:none;color:#5A5A5A;background:#1A1A1A;transition:all .15s}
+    .tab.active{background:#FC4C02;color:#fff}
+
+    /* Cards */
+    .card{background:#171717;border:1px solid #282828;border-radius:14px}
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+    .stat-box{background:#171717;border:1px solid #282828;border-radius:14px;padding:14px 12px;text-align:center}
+    .stat-val{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;line-height:1.1}
+    .stat-lbl{font-size:10px;color:#5A5A5A;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+    .stat-sub{font-size:10px;color:#5A5A5A;margin-top:2px}
+
+    /* Sections */
+    .sec{font-family:'Syne',sans-serif;font-weight:800;font-size:10px;color:#5A5A5A;letter-spacing:2px;text-transform:uppercase;margin:20px 0 10px}
+
+    /* Analysis */
+    .anal-card{background:#171717;border:1px solid #282828;border-radius:14px;padding:16px;border-left:3px solid #FC4C02}
+    .anal-intro{font-size:13px;line-height:1.75;margin-bottom:12px}
+    .anal-pt{margin-bottom:10px}
+    .anal-pt-title{font-size:12px;font-weight:700;color:#FC4C02;margin-bottom:2px}
+    .anal-pt-text{font-size:12px;color:#CCC;line-height:1.65}
+    .anal-concl{font-size:12px;color:#00C896;font-weight:600;margin-top:10px;padding-top:10px;border-top:1px solid #282828}
+
+    /* Day grid */
+    .day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+    .day-card{background:#1F1F1F;border-radius:12px;padding:7px 3px;text-align:center;min-height:95px}
+    .day-name{font-size:9px;font-weight:700;letter-spacing:.5px;margin-bottom:0}
+    .day-date{font-size:8px;color:#5A5A5A;margin-bottom:4px}
+    .day-emoji{font-size:18px;margin-bottom:1px}
+    .day-km{font-family:'Syne',sans-serif;font-weight:800;font-size:13px;line-height:1}
+    .day-unit{font-size:8px;color:#5A5A5A}
+    .day-pace{font-size:8px;margin:2px 0}
+    .day-hr{font-size:8px;color:#5A5A5A}
+    .day-pr{display:inline-block;margin-top:3px;padding:2px 5px;border-radius:100px;background:#FC4C02;color:#fff;font-size:7px;font-weight:700}
+    .day-muted{font-size:9px;color:#5A5A5A}
+
+    /* Streak */
+    .streak-card{padding:16px;border-radius:14px;background:rgba(252,76,2,.1);border:1px solid rgba(252,76,2,.27);margin-top:8px}
+    .streak-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .streak-num{color:#FC4C02}
+    .streak-sub{font-size:11px;color:#5A5A5A;margin-bottom:10px}
+    .streak-track{background:#2A2A2A;border-radius:100px;height:6px}
+    .streak-fill{background:#FC4C02;border-radius:100px;height:6px}
+
+    /* Zones */
+    .zone-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+    .zone-lbl{width:20px;font-size:11px;color:#5A5A5A;font-weight:700}
+    .zone-bar-bg{flex:1;background:#222;border-radius:4px;height:16px;overflow:hidden}
+    .zone-bar{height:100%;border-radius:4px}
+    .zone-pct{width:30px;font-size:12px;font-weight:700;text-align:right}
+    .zone-bpm{width:72px;font-size:9px;color:#5A5A5A;text-align:right}
+
+    /* Content */
+    #content{padding:12px 14px 0}
+    .week-label{font-size:11px;color:#5A5A5A;margin-bottom:8px}
+    .install-hint{margin-top:18px;padding:10px 14px;background:#111;border:1px dashed #282828;border-radius:10px;font-size:10px;color:#5A5A5A;text-align:center}
+
+    /* Error */
+    #error-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:16px;text-align:center}
+    .err-btn{background:#FC4C02;border:none;border-radius:10px;padding:12px 28px;color:#fff;font-size:14px;font-weight:700}
   </style>
 </head>
 <body>
-<div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script type="text/babel">
-const { useState, useEffect, useMemo } = React;
+<div id="app">
+  <!-- Splash -->
+  <div id="splash">
+    <div class="s-avatar">S</div>
+    <p class="sy" style="font-size:19px">Strava Performance</p>
+    <p id="splash-msg" style="font-size:13px;color:#5A5A5A">Iniciando...</p>
+    <div class="s-bar"></div>
+  </div>
 
-// ── CONFIG ───────────────────────────────────────────────────────────────────
-const CID  = "235154";
-const CS   = "503e9c222e53cac459e0788ddac6f23ef692e1a2";
-const REDIR = window.location.origin + window.location.pathname;
+  <!-- Error -->
+  <div id="error-screen">
+    <span style="font-size:40px">⚠️</span>
+    <p class="sy" style="font-size:20px">Erro de conexão</p>
+    <p id="error-msg" style="font-size:13px;color:#5A5A5A;max-width:300px;line-height:1.6"></p>
+    <button class="err-btn" onclick="reconnect()">Reconectar Strava</button>
+  </div>
+
+  <!-- Main (hidden until loaded) -->
+  <div id="main" style="display:none">
+    <div id="header">
+      <div class="h-row">
+        <div class="h-avatar">S</div>
+        <div class="h-meta">
+          <div class="h-name sy" id="athlete-name">—</div>
+          <div class="h-sub">Strava · Dashboard de Performance</div>
+        </div>
+      </div>
+      <div class="h-row2">
+        <div class="h-chip">Atualizado: <span id="upd-date">—</span></div>
+        <button class="h-refresh" onclick="doRefresh()">⟳ Atualizar dados</button>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('atual')" id="tab-atual">Esta Semana</button>
+        <button class="tab" onclick="switchTab('anterior')" id="tab-anterior">Semana Ant.</button>
+        <button class="tab" onclick="switchTab('meses')" id="tab-meses">6 Meses</button>
+      </div>
+    </div>
+    <div id="content">
+      <div class="week-label" id="week-label"></div>
+      <div id="view-atual"></div>
+      <div id="view-anterior" style="display:none"></div>
+      <div id="view-meses" style="display:none"></div>
+      <div class="install-hint">📱 Safari → Compartilhar → Adicionar à Tela de Início</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const CID   = "235154";
+const CS    = "503e9c222e53cac459e0788ddac6f23ef692e1a2";
+const REDIR = location.origin + location.pathname;
 const STOK  = "https://www.strava.com/oauth/token";
 const SAUTH = "https://www.strava.com/oauth/authorize";
 const SAPI  = "https://www.strava.com/api/v3";
-
-// ── THEME ────────────────────────────────────────────────────────────────────
-const OR = "#FC4C02", GR = "#00C896", BL = "#3B82F6";
-const BG = "#0C0C0C", CARD = "#171717", CARD2 = "#1F1F1F", BORD = "#282828";
-const MUT = "#5A5A5A", TXT = "#F0F0F0";
-const ZONES_COLORS = ["#FECACA","#FCA5A5","#F87171","#EF4444","#B91C1C"];
-const DEFAULT_ZONES = [{min:0,max:115},{min:115,max:152},{min:152,max:171},{min:171,max:190},{min:190,max:-1}];
+const OR="#FC4C02",GR="#00C896",BL="#3B82F6";
+const ZC=["#FECACA","#FCA5A5","#F87171","#EF4444","#B91C1C"];
+const DZ=[{min:0,max:115},{min:115,max:152},{min:152,max:171},{min:171,max:190},{min:190,max:-1}];
+const DAYS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
-const ls = {
-  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: k => localStorage.removeItem(k),
-};
-const isRun = t => ["Run","TrailRun","VirtualRun"].includes(t);
-const isGym = t => ["WeightTraining","Yoga","Workout"].includes(t);
-const fmtPace = ms => { if (!ms) return "--"; const s=1000/ms; return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`; };
-const paceNum = ms => ms ? +(1000/ms/60).toFixed(2) : null;
-const paceStr = n => { const m=Math.floor(n), s=Math.round((n-m)*60); return `${m}:${String(s).padStart(2,"0")}`; };
-const fmtMon  = d => new Date(d).toLocaleDateString("pt-BR",{month:"short",year:"2-digit"});
-const fmtDate = d => new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-const DAYS = ["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
+const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
+const isRun=t=>["Run","TrailRun","VirtualRun"].includes(t);
+const isGym=t=>["WeightTraining","Yoga","Workout"].includes(t);
+const fmtPace=ms=>{if(!ms)return"--";const s=1000/ms;return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;};
+const paceN=ms=>ms?+(1000/ms/60).toFixed(2):null;
+const paSt=n=>{const m=Math.floor(n),s=Math.round((n-m)*60);return`${m}:${String(s).padStart(2,"0")}`;};
+const fmtMon=d=>new Date(d).toLocaleDateString("pt-BR",{month:"short",year:"2-digit"});
+const fmtDate=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function el(tag,attrs,html){
+  const e=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else e.setAttribute(k,v);});
+  if(html)e.innerHTML=html;
+  return e;
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let STATE={athlete:null,acts:[],stats:null,zones:DZ,tab:"atual"};
 
 // ── STRAVA API ────────────────────────────────────────────────────────────────
-async function stravaGet(path, token) {
-  let tok = token;
-  if (Date.now()/1000 >= (tok.expires_at||0) - 60) {
-    const r = await fetch(STOK, { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({client_id:CID,client_secret:CS,refresh_token:tok.refresh_token,grant_type:"refresh_token"}) });
-    const d = await r.json();
-    if (!d.access_token) throw new Error("Sessão expirada — reconecte");
-    ls.set("s_tok", d);
-    tok = d;
+async function stravaGet(path,token){
+  let tok=token;
+  if(Date.now()/1000>=(tok.expires_at||0)-60){
+    const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client_id:CID,client_secret:CS,refresh_token:tok.refresh_token,grant_type:"refresh_token"})});
+    const d=await r.json();
+    if(!d.access_token)throw new Error("Sessão expirada — reconecte");
+    ls.set("s_tok",d);tok=d;
   }
-  const r = await fetch(SAPI+path, { headers:{Authorization:`Bearer ${tok.access_token}`} });
-  if (!r.ok) throw new Error(`Strava ${r.status}`);
+  const r=await fetch(SAPI+path,{headers:{Authorization:`Bearer ${tok.access_token}`}});
+  if(!r.ok)throw new Error(`Strava ${r.status}`);
   return r.json();
 }
 
-async function loadData(token) {
-  const athlete   = await stravaGet("/athlete", token);
-  const acts      = await stravaGet("/athlete/activities?per_page=200", token);
-  const stats     = await stravaGet(`/athletes/${athlete.id}/stats`, token).catch(() => null);
-  const zonesResp = await stravaGet("/athlete/zones", token).catch(() => null);
-  const zones     = zonesResp?.heart_rate?.zones || DEFAULT_ZONES;
-  return { athlete, acts, stats, zones };
+async function loadAll(token){
+  setStatus("Carregando atividades...");
+  const athlete=await stravaGet("/athlete",token);
+  const acts=await stravaGet("/athlete/activities?per_page=200",token);
+  const stats=await stravaGet(`/athletes/${athlete.id}/stats`,token).catch(()=>null);
+  const zr=await stravaGet("/athlete/zones",token).catch(()=>null);
+  STATE.athlete=athlete;
+  STATE.acts=acts;
+  STATE.stats=stats;
+  STATE.zones=(zr&&zr.heart_rate&&zr.heart_rate.zones)||DZ;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+async function init(){
+  try{
+    const p=new URLSearchParams(location.search);
+    const code=p.get("code");
+    if(code){
+      history.replaceState({},"",location.pathname);
+      setStatus("Autorizando...");
+      const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client_id:CID,client_secret:CS,code,grant_type:"authorization_code"})});
+      const d=await r.json();
+      if(!d.access_token)throw new Error(d.message||"Token inválido");
+      ls.set("s_tok",d);
+      await loadAll(d);
+      showMain();return;
+    }
+    const saved=ls.get("s_tok");
+    if(saved){
+      setStatus("Conectando...");
+      try{await loadAll(saved);showMain();return;}
+      catch(e){ls.del("s_tok");}
+    }
+    setStatus("Abrindo o Strava...");
+    setTimeout(()=>{location.href=`${SAUTH}?client_id=${CID}&redirect_uri=${encodeURIComponent(REDIR)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`;},700);
+  }catch(err){showError(err.message);}
+}
+
+function setStatus(msg){document.getElementById("splash-msg").textContent=msg;}
+function reconnect(){ls.del("s_tok");location.reload();}
+async function doRefresh(){
+  try{
+    const t=ls.get("s_tok");
+    if(!t)return;
+    document.querySelector(".h-refresh").textContent="...";
+    await loadAll(t);
+    renderAll();
+    document.querySelector(".h-refresh").textContent="⟳ Atualizar dados";
+  }catch(e){alert(e.message);}
+}
+
+function showError(msg){
+  document.getElementById("splash").style.display="none";
+  document.getElementById("error-screen").style.display="flex";
+  document.getElementById("error-msg").textContent=msg;
+}
+
+function showMain(){
+  document.getElementById("splash").style.display="none";
+  document.getElementById("main").style.display="block";
+  document.getElementById("athlete-name").textContent=STATE.athlete?`${STATE.athlete.firstname} ${STATE.athlete.lastname}`:"—";
+  document.getElementById("upd-date").textContent=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"});
+  renderAll();
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  STATE.tab=tab;
+  ["atual","anterior","meses"].forEach(t=>{
+    document.getElementById(`tab-${t}`).className="tab"+(t===tab?" active":"");
+    document.getElementById(`view-${t}`).style.display=t===tab?"block":"none";
+  });
+  const wl=document.getElementById("week-label");
+  if(tab==="atual"){wl.textContent=weekLabel(0);wl.style.display="block";}
+  else if(tab==="anterior"){wl.textContent=weekLabel(1);wl.style.display="block";}
+  else wl.style.display="none";
 }
 
 // ── WEEK HELPERS ──────────────────────────────────────────────────────────────
-function weekBounds(offset) {
-  const now = new Date();
-  const dow = (now.getDay()+6)%7;
-  const mon = new Date(now); mon.setDate(now.getDate()-dow-offset*7); mon.setHours(0,0,0,0);
-  const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
-  return { mon, sun };
+function weekBounds(offset){
+  const now=new Date();const dow=(now.getDay()+6)%7;
+  const mon=new Date(now);mon.setDate(now.getDate()-dow-offset*7);mon.setHours(0,0,0,0);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
+  return{mon,sun};
 }
-function filterWeek(acts, offset) {
-  const { mon, sun } = weekBounds(offset);
-  return acts.filter(a => { const d=new Date(a.start_date); return d>=mon && d<=sun; });
+function filterWeek(acts,offset){
+  const{mon,sun}=weekBounds(offset);
+  return acts.filter(a=>{const d=new Date(a.start_date);return d>=mon&&d<=sun;});
 }
-function weekDays(acts, offset) {
-  const { mon } = weekBounds(offset);
-  return Array.from({length:7}, (_,i) => {
-    const d = new Date(mon); d.setDate(d.getDate()+i);
-    const k = d.toISOString().split("T")[0];
-    return { date:d, acts: acts.filter(a => a.start_date.startsWith(k)) };
-  });
+function weekLabel(offset){
+  const{mon,sun}=weekBounds(offset);
+  const f=d=>d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
+  return`${f(mon)} – ${f(sun)} ${sun.getFullYear()}`;
 }
-function weekLabel(offset) {
-  const { mon, sun } = weekBounds(offset);
-  const f = d => d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
-  return `${f(mon)} – ${f(sun)} ${sun.getFullYear()}`;
-}
-function calcStreak(acts) {
-  const runs = acts.filter(a => isRun(a.type));
-  let streak = 0;
-  const now = new Date();
-  let ws = new Date(now); ws.setDate(ws.getDate()-((ws.getDay()+6)%7)); ws.setHours(0,0,0,0);
-  for (let i=0; i<60; i++) {
-    const we = new Date(ws); we.setDate(we.getDate()+7);
-    if (!runs.some(r => { const d=new Date(r.start_date); return d>=ws && d<we; })) break;
-    streak++; ws.setDate(ws.getDate()-7);
+function calcStreak(acts){
+  const runs=acts.filter(a=>isRun(a.type));
+  if(!runs.length)return 0;
+  let streak=0;
+  const now=new Date();
+  // Start from this Monday
+  let ws=new Date(now);ws.setDate(ws.getDate()-((ws.getDay()+6)%7));ws.setHours(0,0,0,0);
+  // If no run yet this week (week in progress), start counting from last week
+  const curWe=new Date(ws);curWe.setDate(curWe.getDate()+7);
+  const hasThisWeek=runs.some(r=>{const d=new Date(r.start_date);return d>=ws&&d<curWe;});
+  if(!hasThisWeek) ws.setDate(ws.getDate()-7);
+  // Count consecutive weeks backwards
+  for(let i=0;i<60;i++){
+    const we=new Date(ws);we.setDate(we.getDate()+7);
+    if(!runs.some(r=>{const d=new Date(r.start_date);return d>=ws&&d<we;}))break;
+    streak++;ws.setDate(ws.getDate()-7);
   }
   return streak;
 }
-function buildMonthly(acts) {
-  const map = {};
-  acts.filter(a => isRun(a.type)).forEach(r => {
-    const k = fmtMon(r.start_date);
-    if (!map[k]) map[k] = {label:k,km:0,runs:0,pSum:0,hrSum:0,hrN:0,ts:new Date(r.start_date).getTime()};
-    map[k].km += r.distance/1000; map[k].runs++;
-    map[k].pSum += paceNum(r.average_speed)||0;
-    if (r.has_heartrate && r.average_heartrate) { map[k].hrSum += r.average_heartrate; map[k].hrN++; }
+function buildMonthly(acts){
+  const map={};
+  acts.filter(a=>isRun(a.type)).forEach(r=>{
+    const k=fmtMon(r.start_date);
+    if(!map[k])map[k]={label:k,km:0,runs:0,pSum:0,hrSum:0,hrN:0,ts:new Date(r.start_date).getTime()};
+    map[k].km+=r.distance/1000;map[k].runs++;map[k].pSum+=paceN(r.average_speed)||0;
+    if(r.has_heartrate&&r.average_heartrate){map[k].hrSum+=r.average_heartrate;map[k].hrN++;}
   });
-  return Object.values(map).sort((a,b)=>a.ts-b.ts).map(m => ({
-    label:m.label, km:+m.km.toFixed(1), corridas:m.runs,
+  return Object.values(map).sort((a,b)=>a.ts-b.ts).map(m=>({
+    label:m.label,km:+m.km.toFixed(1),corridas:m.runs,
     pace:+(m.pSum/Math.max(m.runs,1)).toFixed(2),
-    hr: m.hrN ? Math.round(m.hrSum/m.hrN) : null
+    hr:m.hrN?Math.round(m.hrSum/m.hrN):null
   }));
 }
 
-// ── HR ZONES ESTIMATE ─────────────────────────────────────────────────────────
-function estimateZones(acts, ranges) {
-  let total = 0; const zSec = ranges.map(()=>0);
-  acts.forEach(a => {
-    const dur = a.moving_time||0; if (!dur) return;
+// ── HR ZONES ─────────────────────────────────────────────────────────────────
+function estimateZones(acts,ranges){
+  let total=0;const zSec=ranges.map(()=>0);
+  acts.forEach(a=>{
+    const dur=a.moving_time||0;if(!dur)return;
     let dist;
-    if (isGym(a.type)) { dist=[0.75,0.18,0.05,0.02,0.00]; }
-    else if (a.has_heartrate && a.average_heartrate) {
-      const avg=a.average_heartrate, sig=15;
-      const phi = x => 0.5*(1+Math.tanh(x/1.4142));
-      const raw = ranges.map(({min,max}) => {
-        const hi = max===-1 ? avg+50 : max;
-        return Math.max(0, phi((hi-avg)/sig) - phi((min-avg)/sig));
-      });
-      const s = raw.reduce((a,b)=>a+b,0)||1;
-      dist = raw.map(v=>v/s);
-    } else return;
-    total += dur;
-    dist.forEach((p,i) => { if(i<zSec.length) zSec[i]+=dur*p; });
+    if(isGym(a.type)){dist=[.75,.18,.05,.02,.00];}
+    else if(a.has_heartrate&&a.average_heartrate){
+      const avg=a.average_heartrate,sig=15;
+      const phi=x=>0.5*(1+Math.tanh(x/1.4142));
+      const raw=ranges.map(({min,max})=>{const hi=max===-1?avg+50:max;return Math.max(0,phi((hi-avg)/sig)-phi((min-avg)/sig));});
+      const s=raw.reduce((a,b)=>a+b,0)||1;dist=raw.map(v=>v/s);
+    }else return;
+    total+=dur;dist.forEach((p,i)=>{if(i<zSec.length)zSec[i]+=dur*p;});
   });
-  if (!total) return null;
-  const s = zSec.reduce((a,b)=>a+b,0)||1;
-  return zSec.map(v => Math.round(v/s*100));
+  if(!total)return null;
+  const s=zSec.reduce((a,b)=>a+b,0)||1;
+  return zSec.map(v=>Math.round(v/s*100));
 }
 
 // ── COACH ANALYSIS ────────────────────────────────────────────────────────────
-function analyzeWeek(wActs, pActs, isCurrent) {
-  const wr = wActs.filter(a=>isRun(a.type));
-  const pr = pActs.filter(a=>isRun(a.type));
-  const wkm = wr.reduce((s,r)=>s+r.distance/1000,0);
-  const pkm = pr.reduce((s,r)=>s+r.distance/1000,0);
-  const wsp = wr.length ? wr.reduce((s,r)=>s+(r.average_speed||0),0)/wr.length : 0;
-  const psp = pr.length ? pr.reduce((s,r)=>s+(r.average_speed||0),0)/pr.length : 0;
-  const hrr = wr.filter(r=>r.has_heartrate&&r.average_heartrate);
-  const avgHR = hrr.length ? Math.round(hrr.reduce((s,r)=>s+r.average_heartrate,0)/hrr.length) : null;
-  const effort = wr.reduce((s,r)=>s+(r.suffer_score||0),0);
-  const chg = pkm>0 ? (wkm-pkm)/pkm*100 : null;
-  const pcChg = wsp>0&&psp>0 ? paceNum(wsp)-paceNum(psp) : null;
+function analyzeWeek(wActs,pActs,isCurrent){
+  const wr=wActs.filter(a=>isRun(a.type));
+  const pr=pActs.filter(a=>isRun(a.type));
+  const wkm=wr.reduce((s,r)=>s+r.distance/1000,0);
+  const pkm=pr.reduce((s,r)=>s+r.distance/1000,0);
+  const wsp=wr.length?wr.reduce((s,r)=>s+(r.average_speed||0),0)/wr.length:0;
+  const psp=pr.length?pr.reduce((s,r)=>s+(r.average_speed||0),0)/pr.length:0;
+  const hrr=wr.filter(r=>r.has_heartrate&&r.average_heartrate);
+  const avgHR=hrr.length?Math.round(hrr.reduce((s,r)=>s+r.average_heartrate,0)/hrr.length):null;
+  const effort=wr.reduce((s,r)=>s+(r.suffer_score||0),0);
+  const chg=pkm>0?(wkm-pkm)/pkm*100:null;
+  const pcChg=wsp>0&&psp>0?paceN(wsp)-paceN(psp):null;
 
-  if (!wr.length) return {
-    headline: isCurrent ? "Nenhuma corrida ainda esta semana" : "Semana sem corridas",
-    points: [isCurrent ? "Semana em andamento ou de descanso ativo. O descanso faz parte do plano." : "Semana de descanso. O corpo também evolui quando recupera."],
-    conclusion: ""
-  };
+  if(!wr.length)return{headline:isCurrent?"Nenhuma corrida ainda esta semana":"Semana sem corridas",points:[isCurrent?"Semana em andamento. Descanso ativo faz parte do processo.":"Semana de descanso ou intercorrência."],conclusion:""};
 
-  const pts = [];
-  if (chg !== null) pts.push(`${chg>=0?"📈":"📉"} Volume ${chg>=0?"acima":"abaixo"} da semana anterior — ${Math.abs(chg).toFixed(0)}% (${pkm.toFixed(1)} → ${wkm.toFixed(1)} km). ${chg>15?"Progressão alta — monitore sinais de fadiga.":chg<-25?"Volume reduzido. Se foi intencional, ótimo.":"Progressão dentro do limite seguro de 10%."}`);
-  if (wsp>0) pts.push(psp>0
-    ? (pcChg<-0.05 ? `⚡ Ritmo melhorou — ${fmtPace(wsp)}/km vs ${fmtPace(psp)}/km. Adaptação positiva.` : `🧘 Ritmo conservador — ${fmtPace(wsp)}/km vs ${fmtPace(psp)}/km. Pode indicar fadiga ou treino de recuperação.`)
-    : `⚡ Ritmo médio: ${fmtPace(wsp)}/km.`);
-  if (avgHR) {
-    const z = avgHR<115?"Z1 (recuperação)":avgHR<152?"Z2 (aeróbico base)":avgHR<171?"Z3 (intenso)":"Z4+ (limiar/máximo)";
-    pts.push(`❤️ FC média: ${avgHR} bpm (${z}). ${avgHR<152?"Ideal para construção de base aeróbica.":"Alta intensidade — garanta recuperação adequada."}`);
-  }
-  if (effort>0) pts.push(`🔥 Esforço relativo: ${effort} pts — ${effort>150?"semana de alta carga.":effort>80?"carga moderada.":"carga leve."}`);
+  const pts=[];
+  if(chg!==null)pts.push(`${chg>=0?"📈":"📉"} Volume ${chg>=0?"acima":"abaixo"} da semana anterior — ${Math.abs(chg).toFixed(0)}% (${pkm.toFixed(1)} → ${wkm.toFixed(1)} km). ${chg>15?"Progressão alta — monitore fadiga.":chg<-25?"Volume reduzido — se intencional, ótimo.":"Progressão segura."}`);
+  if(wsp>0)pts.push(psp>0?(pcChg<-0.05?`⚡ Ritmo melhorou — ${fmtPace(wsp)}/km vs ${fmtPace(psp)}/km. Adaptação positiva.`:`🧘 Ritmo conservador — ${fmtPace(wsp)}/km vs ${fmtPace(psp)}/km.`):`⚡ Ritmo médio: ${fmtPace(wsp)}/km.`);
+  if(avgHR){const z=avgHR<115?"Z1":avgHR<152?"Z2 (aeróbico base)":avgHR<171?"Z3 (intenso)":"Z4+";pts.push(`❤️ FC média: ${avgHR} bpm (${z}). ${avgHR<152?"Ideal para construção aeróbica.":"Alta intensidade — garanta recuperação."}`);}
+  if(effort>0)pts.push(`🔥 Esforço relativo: ${effort} pts — ${effort>150?"alta carga.":effort>80?"carga moderada.":"carga leve."}`);
 
-  const conc = isCurrent
-    ? (wr.length>=3 ? "Frequência consistente esta semana. Continue." : "Adicione pelo menos mais uma corrida para manter o ritmo.")
-    : (pcChg&&pcChg<-0.1 ? "Semana com evolução de ritmo — sinal de adaptação cardiovascular." : "Semana sólida de construção de base.");
-
-  return {
-    headline: `${wr.length} corrida${wr.length>1?"s":""} · ${wkm.toFixed(1)} km${chg!=null?" ("+(chg>=0?"+":"")+chg.toFixed(0)+"% vs ant.)":""}`,
-    points: pts, conclusion: conc
-  };
+  const conc=isCurrent?(wr.length>=3?"Frequência consistente esta semana.":"Adicione mais uma corrida para manter o streak."):(pcChg&&pcChg<-0.1?"Semana com evolução de ritmo — ótimo sinal.":"Semana sólida de base aeróbica.");
+  return{headline:`${wr.length} corrida${wr.length>1?"s":""} · ${wkm.toFixed(1)} km${chg!=null?" ("+(chg>=0?"+":"")+chg.toFixed(0)+"% vs ant.)":""}`,points:pts,conclusion:conc};
 }
 
-function analyzeSix(monthly, totalKm, count, streak, maxKm) {
-  if (!monthly || monthly.length < 2) return null;
-  const f=monthly[0], l=monthly[monthly.length-1];
-  const imp = f.pace-l.pace;
-  const impStr = `${Math.floor(imp)}:${String(Math.round((imp%1)*60)).padStart(2,"0")}`;
-  const vChg = f.km>0 ? ((l.km-f.km)/f.km*100) : 0;
-  const best = [...monthly].sort((a,b)=>b.km-a.km)[0];
-  return {
-    intro: `O número mais importante: seu ritmo saiu de ${paceStr(f.pace)}/km em ${f.label} para ${paceStr(l.pace)}/km em ${l.label} — ${impStr} de melhora em ${monthly.length} meses. Para um iniciante, isso é acima da curva.`,
-    points: [
-      { icon:"🔥", title:"Consistência fora do normal", text:`${streak} semanas consecutivas sem uma semana em branco. Isso é o que separa atletas que evoluem dos que ficam estagnados.` },
-      { icon:"📈", title:"Volume crescendo com qualidade", text:`De ${f.km.toFixed(0)} km em ${f.label} para ${l.km.toFixed(0)} km em ${l.label} (${vChg>0?"+":""}${vChg.toFixed(0)}%). Melhor mês: ${best.label} com ${best.km.toFixed(1)} km.` },
-      { icon:"🎯", title:"Próximo passo está claro", text:`Maior corrida: ${maxKm} km. Adicione uma corrida longa semanal — começa com ${Math.ceil(maxKm)+1} km aos sábados. Um 10K até agosto é totalmente factível.` }
+function analyzeSix(monthly,totalKm,count,streak,maxKm){
+  if(!monthly||monthly.length<2)return null;
+  const f=monthly[0],l=monthly[monthly.length-1];
+  const imp=f.pace-l.pace;
+  const impStr=`${Math.floor(Math.abs(imp))}:${String(Math.round((Math.abs(imp)%1)*60)).padStart(2,"0")}`;
+  const vChg=f.km>0?((l.km-f.km)/f.km*100):0;
+  const best=[...monthly].sort((a,b)=>b.km-a.km)[0];
+  const paceImproved=imp>0; // f.pace > l.pace means got faster (lower number)
+  const volTitle=vChg>=5?"Volume crescendo com qualidade":vChg<=-5?"Volume em ajuste — foco na consistência":"Volume estável";
+  return{
+    intro:`O número mais importante: seu ritmo saiu de ${paSt(f.pace)}/km em ${f.label} para ${paSt(l.pace)}/km em ${l.label} — ${paceImproved?impStr+" de melhora":"sem mudança significativa"} em ${monthly.length} meses. ${paceImproved&&imp>0.3?"Para um iniciante, isso é acima da curva.":"Evolução consistente no período."}`,
+    points:[
+      {icon:"🔥",title:"Consistência fora do normal",text:`${streak} semanas consecutivas sem uma semana em branco. Isso é o que separa atletas que evoluem dos que ficam estagnados.`},
+      {icon:"📈",title:volTitle,text:`De ${f.km.toFixed(0)} km em ${f.label} para ${l.km.toFixed(0)} km em ${l.label} (${vChg>0?"+":""}${vChg.toFixed(0)}%). Melhor mês: ${best.label} com ${best.km.toFixed(1)} km.`},
+      {icon:"🎯",title:"Próximo passo está claro",text:`Maior corrida: ${maxKm} km. Adicione corrida longa semanal — ${Math.ceil(maxKm)+1} km aos sábados. Um 10K até agosto é totalmente factível.`}
     ],
-    conclusion: `Com ${totalKm} km em ${count} corridas, a base está sólida. Meta: ${paceStr(l.pace-0.2)}/km nos próximos 60 dias.`
+    conclusion:`Com ${totalKm} km em ${count} corridas, a base está sólida. Meta: ${paSt(l.pace-0.2)}/km nos próximos 60 dias.`
   };
 }
 
 // ── SVG CHARTS ────────────────────────────────────────────────────────────────
-function LineChart({ data, dKey, color, height=115, reversed=false }) {
-  const pts = data.filter(d => d[dKey] != null);
-  if (pts.length < 2) return null;
-  const vals = pts.map(d => d[dKey]);
-  const mn=Math.min(...vals), mx=Math.max(...vals), rng=mx-mn||1;
-  const W=300, P=8, IH=height-16;
-  const mapped = pts.map((d,i) => ({
-    x: P+(i/(pts.length-1))*(W-P*2),
-    y: reversed ? P+((d[dKey]-mn)/rng)*IH : IH+P-((d[dKey]-mn)/rng)*IH,
-    l: d.label
+function lineChart(data,dKey,color,height,reversed){
+  const pts=data.filter(d=>d[dKey]!=null);
+  if(pts.length<2)return"";
+  const vals=pts.map(d=>d[dKey]);
+  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
+  const W=300,P=8,IH=height-16;
+  const mapped=pts.map((d,i)=>({
+    x:P+(i/(pts.length-1))*(W-P*2),
+    y:reversed?P+((d[dKey]-mn)/rng)*IH:IH+P-((d[dKey]-mn)/rng)*IH,
+    l:d.label
   }));
-  const path = mapped.map((p,i) => `${i?"L":"M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const area = path + ` L${mapped[mapped.length-1].x.toFixed(1)},${IH+P} L${mapped[0].x.toFixed(1)},${IH+P} Z`;
-  const gid = `g${dKey}${color.replace("#","")}`;
-  const step = Math.max(1, Math.ceil(mapped.length/5));
-  return (
-    <svg viewBox={`0 0 ${W} ${height}`} style={{width:"100%",height}}>
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2"/>
-          <stop offset="100%" stopColor={color} stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`}/>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      {mapped.map((p,i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill={color}/>)}
-      {mapped.filter((_,i) => i%step===0 || i===mapped.length-1).map((p,i) =>
-        <text key={i} x={p.x} y={height} textAnchor="middle" fontSize="9" fill={MUT}>{p.l}</text>
-      )}
-    </svg>
-  );
+  const path=mapped.map((p,i)=>`${i?"L":"M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const area=path+` L${mapped[mapped.length-1].x.toFixed(1)},${IH+P} L${mapped[0].x.toFixed(1)},${IH+P} Z`;
+  const gid="g"+Math.random().toString(36).slice(2,8);
+  const step=Math.max(1,Math.ceil(mapped.length/5));
+  const circles=mapped.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${color}"/>`).join("");
+  const labels=mapped.filter((_,i)=>i%step===0||i===mapped.length-1).map(p=>`<text x="${p.x.toFixed(1)}" y="${height}" text-anchor="middle" font-size="9" fill="#5A5A5A">${esc(p.l)}</text>`).join("");
+  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${circles}${labels}</svg>`;
 }
 
-function BarChart({ data, dKey, color, height=95 }) {
-  const vals = data.map(d => d[dKey]||0);
-  const mx = Math.max(...vals, 1);
-  const W=300, P=8, n=data.length, bw=Math.min(22,(W-P*2)/n-3);
-  const step = Math.max(1, Math.ceil(n/5));
-  return (
-    <svg viewBox={`0 0 ${W} ${height}`} style={{width:"100%",height}}>
-      {data.map((d,i) => {
-        const x=P+(i/n)*(W-P*2)+bw*0.2, bh=((d[dKey]||0)/mx)*(height-16);
-        return (
-          <g key={i}>
-            <rect x={x} y={height-14-bh} width={bw} height={Math.max(bh,1)} fill={color} rx="3" opacity="0.9"/>
-            {(i%step===0 || i===n-1) && <text x={x+bw/2} y={height} textAnchor="middle" fontSize="9" fill={MUT}>{d.label}</text>}
-          </g>
-        );
-      })}
-    </svg>
-  );
+function barChart(data,dKey,color,height){
+  const vals=data.map(d=>d[dKey]||0),mx=Math.max(...vals,1);
+  const W=300,P=8,n=data.length,bw=Math.min(22,(W-P*2)/n-3);
+  const step=Math.max(1,Math.ceil(n/5));
+  const bars=data.map((d,i)=>{
+    const x=P+(i/n)*(W-P*2)+bw*0.2,bh=((d[dKey]||0)/mx)*(height-16);
+    const lbl=(i%step===0||i===n-1)?`<text x="${(x+bw/2).toFixed(1)}" y="${height}" text-anchor="middle" font-size="9" fill="#5A5A5A">${esc(d.label)}</text>`:"";
+    return`<rect x="${x.toFixed(1)}" y="${(height-14-bh).toFixed(1)}" width="${bw}" height="${Math.max(bh,1).toFixed(1)}" fill="${color}" rx="3" opacity="0.9"/>${lbl}`;
+  }).join("");
+  return`<svg viewBox="0 0 ${W} ${height}" style="width:100%;height:${height}px">${bars}</svg>`;
 }
 
-function ZonesChart({ pct, ranges }) {
-  if (!pct) return <p style={{color:MUT,fontSize:12,padding:"8px 0"}}>Dados insuficientes para zonas.</p>;
-  const labels = ranges.map(({min,max},i) => max===-1?`>${min}`:i===0?`<${max}`:`${min}–${max}`);
-  const top = pct.indexOf(Math.max(...pct));
-  return (
-    <div>
-      <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>
-        {pct[top]}% em Zona {top+1}&nbsp;
-        <span style={{fontSize:11,color:MUT,fontWeight:400}}>({labels[top]} bpm)</span>
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:7}}>
-        {[4,3,2,1,0].map(i => (
-          <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:20,fontSize:11,color:MUT,fontWeight:700}}>Z{i+1}</div>
-            <div style={{flex:1,background:"#222",borderRadius:4,height:16,overflow:"hidden"}}>
-              <div style={{width:`${Math.max(pct[i],1)}%`,height:"100%",background:ZONES_COLORS[i],borderRadius:4}}/>
-            </div>
-            <div style={{width:30,fontSize:12,fontWeight:700,color:ZONES_COLORS[i],textAlign:"right"}}>{pct[i]}%</div>
-            <div style={{width:72,fontSize:9,color:MUT,textAlign:"right"}}>{labels[i]} bpm</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function zonesHtml(pct,ranges){
+  if(!pct)return`<p style="color:#5A5A5A;font-size:12px;padding:8px 0">Dados insuficientes.</p>`;
+  const labels=ranges.map(({min,max},i)=>max===-1?`>${min}`:i===0?`<${max}`:`${min}–${max}`);
+  const top=pct.indexOf(Math.max(...pct));
+  const rows=[4,3,2,1,0].map(i=>`
+    <div class="zone-row">
+      <div class="zone-lbl">Z${i+1}</div>
+      <div class="zone-bar-bg"><div class="zone-bar" style="width:${Math.max(pct[i],1)}%;background:${ZC[i]}"></div></div>
+      <div class="zone-pct" style="color:${ZC[i]}">${pct[i]}%</div>
+      <div class="zone-bpm">${labels[i]} bpm</div>
+    </div>`).join("");
+  return`<div style="font-size:13px;font-weight:600;margin-bottom:10px">${pct[top]}% em Zona ${top+1} <span style="font-size:11px;color:#5A5A5A;font-weight:400">(${labels[top]} bpm)</span></div>${rows}`;
 }
 
-// ── UI COMPONENTS ─────────────────────────────────────────────────────────────
-const card = { background:CARD, border:`1px solid ${BORD}`, borderRadius:14 };
+// ── RENDER WEEK ───────────────────────────────────────────────────────────────
+function renderWeek(container,offset){
+  const wa=filterWeek(STATE.acts,offset);
+  const pa=filterWeek(STATE.acts,offset+1);
+  const runs=wa.filter(a=>isRun(a.type));
+  const tkm=runs.reduce((s,r)=>s+r.distance/1000,0);
+  const pkm=pa.filter(a=>isRun(a.type)).reduce((s,r)=>s+r.distance/1000,0);
+  const asp=runs.length?runs.reduce((s,r)=>s+(r.average_speed||0),0)/runs.length:0;
+  const hrr=runs.filter(r=>r.has_heartrate&&r.average_heartrate);
+  const avgHR=hrr.length?Math.round(hrr.reduce((s,r)=>s+r.average_heartrate,0)/hrr.length):null;
+  const chg=pkm>0?(tkm-pkm)/pkm*100:null;
+  const anal=analyzeWeek(wa,pa,offset===0);
+  const zpct=estimateZones(wa,STATE.zones);
 
-function StatBox({ val, label, color=TXT, sub }) {
-  return (
-    <div style={{...card,padding:"14px 12px",textAlign:"center"}}>
-      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:28,color,lineHeight:1.1}}>{val}</div>
-      <div style={{fontSize:10,color:MUT,marginTop:4,textTransform:"uppercase",letterSpacing:1}}>{label}</div>
-      {sub && <div style={{fontSize:10,color:MUT,marginTop:2}}>{sub}</div>}
-    </div>
-  );
-}
+  // Stats
+  const sub=chg!=null?`${chg>=0?"+":""}${chg.toFixed(0)}% vs ant.`:"";
+  let html=`<div class="stat-grid">
+    <div class="stat-box"><div class="stat-val" style="color:${OR}">${tkm.toFixed(1)}</div><div class="stat-lbl">km total</div>${sub?`<div class="stat-sub">${sub}</div>`:""}</div>
+    <div class="stat-box"><div class="stat-val">${asp>0?fmtPace(asp):"--"}</div><div class="stat-lbl">pace médio</div></div>
+    <div class="stat-box"><div class="stat-val">${runs.length}</div><div class="stat-lbl">corridas</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:${avgHR?BL:"#5A5A5A"}">${avgHR||"--"}</div><div class="stat-lbl">fc média bpm</div></div>
+  </div>`;
 
-function AnalCard({ data }) {
-  if (!data) return null;
-  return (
-    <div style={{...card,padding:16,borderLeft:`3px solid ${OR}`}}>
-      {data.intro && <p style={{fontSize:13,lineHeight:1.75,color:TXT,marginBottom:12}}>{data.intro}</p>}
-      {data.points && (
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {data.points.map((p,i) => (
-            <div key={i}>
-              {typeof p==="string"
-                ? <p style={{fontSize:12,color:"#CCC",lineHeight:1.65}}>{p}</p>
-                : <>
-                    <p style={{fontSize:12,fontWeight:700,color:OR,marginBottom:2}}>{p.icon} {p.title}</p>
-                    <p style={{fontSize:12,color:"#CCC",lineHeight:1.65}}>{p.text}</p>
-                  </>
-              }
-            </div>
-          ))}
-        </div>
-      )}
-      {data.conclusion && (
-        <p style={{fontSize:12,color:GR,marginTop:10,paddingTop:10,borderTop:`1px solid ${BORD}`,fontWeight:600}}>
-          → {data.conclusion}
-        </p>
-      )}
-    </div>
-  );
-}
+  // Analysis
+  html+=`<div class="sec">Análise do Coach</div><div class="anal-card">`;
+  anal.points.forEach(p=>html+=`<div class="anal-pt"><div class="anal-pt-text">${esc(p)}</div></div>`);
+  if(anal.conclusion)html+=`<div class="anal-concl">→ ${esc(anal.conclusion)}</div>`;
+  html+=`</div>`;
 
-function Sec({ children }) {
-  return <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:10,color:MUT,letterSpacing:2,textTransform:"uppercase",margin:"20px 0 10px"}}>{children}</div>;
-}
+  // Day grid
+  const{mon}=weekBounds(offset);
+  html+=`<div class="sec">Dias da Semana</div><div class="day-grid">`;
+  for(let i=0;i<7;i++){
+    const d=new Date(mon);d.setDate(d.getDate()+i);
+    const k=d.toISOString().split("T")[0];
+    const da=STATE.acts.filter(a=>a.start_date.startsWith(k));
+    const run=da.find(a=>isRun(a.type));
+    const gym=da.find(a=>isGym(a.type));
+    const bd=run?OR:gym?BL:"#282828";
+    const dname=DAYS[d.getDay()];
+    const ddate=`${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+    let inner="";
+    if(run){
+      const pr=run.suffer_score>85;
+      inner=`<div class="day-emoji">🏃</div><div class="day-km">${(run.distance/1000).toFixed(1)}</div><div class="day-unit">km</div><div class="day-pace" style="color:${OR}">${fmtPace(run.average_speed)}/km</div>${run.has_heartrate?`<div class="day-hr">${Math.round(run.average_heartrate)}bpm</div>`:""}${pr?`<div class="day-pr">🏅 RP</div>`:""}`;
+    }else if(gym){
+      inner=`<div class="day-emoji">🏋️</div><div class="day-muted">Musculação</div>`;
+    }else{
+      inner=`<div class="day-emoji">😴</div><div class="day-muted">Descanso</div>`;
+    }
+    html+=`<div class="day-card" style="border:2px solid ${bd}"><div class="day-name" style="color:${run?OR:gym?BL:"#5A5A5A"}">${dname}</div><div class="day-date">${ddate}</div>${inner}</div>`;
+  }
+  html+=`</div>`;
 
-function DayGrid({ days }) {
-  return (
-    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
-      {days.map(({date,acts},i) => {
-        const run = acts.find(a=>isRun(a.type));
-        const gym = acts.find(a=>isGym(a.type));
-        const bd  = run ? OR : gym ? BL : BORD;
-        const isPR = run && run.suffer_score > 85;
-        return (
-          <div key={i} style={{background:CARD2,border:`2px solid ${bd}`,borderRadius:12,padding:"7px 3px",textAlign:"center",minHeight:95}}>
-            <div style={{fontSize:9,fontWeight:700,color:run?OR:gym?BL:MUT,letterSpacing:0.5}}>{DAYS[date.getDay()]}</div>
-            <div style={{fontSize:8,color:MUT,marginBottom:4}}>{String(date.getDate()).padStart(2,"0")}/{String(date.getMonth()+1).padStart(2,"0")}</div>
-            {run ? (
-              <>
-                <div style={{fontSize:18,marginBottom:1}}>🏃</div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:13,lineHeight:1}}>{(run.distance/1000).toFixed(1)}</div>
-                <div style={{fontSize:8,color:MUT}}>km</div>
-                <div style={{fontSize:8,color:OR,margin:"2px 0"}}>{fmtPace(run.average_speed)}/km</div>
-                {run.has_heartrate && <div style={{fontSize:8,color:MUT}}>{Math.round(run.average_heartrate)}bpm</div>}
-                {isPR && <div style={{marginTop:3,display:"inline-block",padding:"2px 5px",borderRadius:100,background:OR,color:"#fff",fontSize:7,fontWeight:700}}>🏅 RP</div>}
-              </>
-            ) : gym ? (
-              <>
-                <div style={{fontSize:18,marginBottom:4}}>🏋️</div>
-                <div style={{fontSize:9,color:MUT}}>Musculação</div>
-              </>
-            ) : (
-              <>
-                <div style={{fontSize:18,marginBottom:4}}>😴</div>
-                <div style={{fontSize:9,color:MUT}}>Descanso</div>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── WEEK VIEW ─────────────────────────────────────────────────────────────────
-function WeekView({ acts, offset, zones }) {
-  const wa   = useMemo(() => filterWeek(acts, offset), [acts, offset]);
-  const pa   = useMemo(() => filterWeek(acts, offset+1), [acts, offset]);
-  const days = useMemo(() => weekDays(acts, offset), [acts, offset]);
-  const runs = wa.filter(a => isRun(a.type));
-  const tkm  = runs.reduce((s,r)=>s+r.distance/1000, 0);
-  const pkm  = pa.filter(a=>isRun(a.type)).reduce((s,r)=>s+r.distance/1000, 0);
-  const asp  = runs.length ? runs.reduce((s,r)=>s+(r.average_speed||0),0)/runs.length : 0;
-  const hrr  = runs.filter(r=>r.has_heartrate&&r.average_heartrate);
-  const avgHR = hrr.length ? Math.round(hrr.reduce((s,r)=>s+r.average_heartrate,0)/hrr.length) : null;
-  const chg  = pkm>0 ? (tkm-pkm)/pkm*100 : null;
-  const anal = useMemo(() => analyzeWeek(wa, pa, offset===0), [wa, pa, offset]);
-  const zpct = useMemo(() => estimateZones(wa, zones), [wa, zones]);
-  const paceData = runs.slice().reverse().map(r => ({label:fmtDate(r.start_date), pace:paceNum(r.average_speed)}));
-
-  return (
-    <div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
-        <StatBox val={tkm.toFixed(1)} label="km total" color={OR} sub={chg!=null?`${chg>=0?"+":""}${chg.toFixed(0)}% vs ant.`:null}/>
-        <StatBox val={asp>0?fmtPace(asp):"--"} label="pace médio"/>
-        <StatBox val={runs.length} label="corridas"/>
-        <StatBox val={avgHR||"--"} label="fc média bpm" color={avgHR?BL:MUT}/>
-      </div>
-      <Sec>Análise do Coach</Sec>
-      <AnalCard data={anal}/>
-      <Sec>Dias da Semana</Sec>
-      <DayGrid days={days}/>
-      {runs.length > 1 && <>
-        <Sec>Pace por Corrida</Sec>
-        <div style={{...card,padding:14}}>
-          <LineChart data={paceData} dKey="pace" color={OR} reversed={true}/>
-          <p style={{fontSize:10,color:MUT,textAlign:"center",marginTop:4}}>menor = mais rápido</p>
-        </div>
-      </>}
-      <Sec>Zonas de Frequência Cardíaca</Sec>
-      <div style={{...card,padding:14}}>
-        <ZonesChart pct={zpct} ranges={zones}/>
-      </div>
-    </div>
-  );
-}
-
-// ── SIX MONTH VIEW ────────────────────────────────────────────────────────────
-function SixView({ acts, stats, zones }) {
-  const since   = useMemo(() => { const d=new Date(); d.setMonth(d.getMonth()-6); return d; }, []);
-  const recent  = useMemo(() => acts.filter(a => new Date(a.start_date)>=since), [acts, since]);
-  const runs    = useMemo(() => recent.filter(a=>isRun(a.type)), [recent]);
-  const monthly = useMemo(() => buildMonthly(recent), [recent]);
-  const streak  = useMemo(() => calcStreak(acts), [acts]);
-  const totalKm = Math.round(runs.reduce((s,r)=>s+r.distance/1000, 0));
-  const biggest = runs.length ? [...runs].sort((a,b)=>b.distance-a.distance)[0] : null;
-  const maxKm   = biggest ? +(biggest.distance/1000).toFixed(1) : 0;
-  const avgSp   = runs.length ? runs.reduce((s,r)=>s+(r.average_speed||0),0)/runs.length : 0;
-  const anal    = useMemo(() => analyzeSix(monthly,totalKm,runs.length,streak,maxKm), [monthly,totalKm,runs.length,streak,maxKm]);
-  const zpct    = useMemo(() => estimateZones(recent, zones), [recent, zones]);
-
-  return (
-    <div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
-        <StatBox val={totalKm} label="km totais" color={OR} sub={`${runs.length} corridas`}/>
-        <StatBox val={avgSp>0?fmtPace(avgSp):"--"} label="pace médio"/>
-        <StatBox val={streak} label="semanas seguidas" color={OR}/>
-        <StatBox val={maxKm} label="maior corrida" sub="km"/>
-      </div>
-      <div style={{...card,padding:16,background:"rgba(252,76,2,0.1)",border:`1px solid ${OR}44`,marginTop:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-          <span style={{fontSize:22}}>🔥</span>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:18}}>
-            <span style={{color:OR}}>{streak}</span> semanas consecutivas
-          </span>
-        </div>
-        <p style={{fontSize:11,color:MUT,marginBottom:10}}>Meta de 52 semanas — {Math.round(streak/52*100)}% · {52-streak} restantes</p>
-        <div style={{background:"#2A2A2A",borderRadius:100,height:6}}>
-          <div style={{background:OR,borderRadius:100,height:6,width:`${Math.min(streak/52*100,100)}%`}}/>
-        </div>
-      </div>
-      <Sec>Análise dos 6 Meses</Sec>
-      <AnalCard data={anal}/>
-      {monthly.length > 1 && <>
-        <Sec>Ritmo Médio por Mês</Sec>
-        <div style={{...card,padding:14}}>
-          <p style={{fontSize:10,color:MUT,marginBottom:8}}>min/km — menor = mais rápido</p>
-          <LineChart data={monthly} dKey="pace" color={OR} reversed={true}/>
-        </div>
-        <Sec>Volume Mensal (km)</Sec>
-        <div style={{...card,padding:14}}>
-          <BarChart data={monthly} dKey="km" color={OR}/>
-        </div>
-        <Sec>Frequência de Corridas</Sec>
-        <div style={{...card,padding:14}}>
-          <BarChart data={monthly} dKey="corridas" color="#666" height={85}/>
-        </div>
-        {monthly.some(m=>m.hr) && <>
-          <Sec>FC Média por Mês</Sec>
-          <div style={{...card,padding:14}}>
-            <LineChart data={monthly.filter(m=>m.hr)} dKey="hr" color={BL}/>
-          </div>
-        </>}
-      </>}
-      <Sec>Zonas de FC · 6 Meses</Sec>
-      <div style={{...card,padding:14}}>
-        <ZonesChart pct={zpct} ranges={zones}/>
-      </div>
-    </div>
-  );
-}
-
-// ── SPLASH ────────────────────────────────────────────────────────────────────
-function Splash({ msg }) {
-  return (
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:BG,gap:16}}>
-      <div style={{width:68,height:68,background:OR,borderRadius:18,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:34,color:"#fff"}}>S</div>
-      <p style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:19,color:TXT}}>Strava Performance</p>
-      <p style={{fontSize:13,color:MUT}}>{msg}</p>
-      <div style={{width:44,height:3,background:OR,borderRadius:3}}/>
-    </div>
-  );
-}
-
-// ── APP ───────────────────────────────────────────────────────────────────────
-function App() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [status,  setStatus]  = useState("Iniciando...");
-  const [error,   setError]   = useState("");
-  const [tab,     setTab]     = useState("atual");
-  const [busy,    setBusy]    = useState(false);
-  const [updated, setUpdated] = useState(null);
-
-  async function run(token) {
-    setStatus("Carregando treinos...");
-    const d = await loadData(token);
-    setData(d);
-    setUpdated(new Date());
+  // Pace chart
+  if(runs.length>1){
+    const paceData=runs.slice().reverse().map(r=>({label:fmtDate(r.start_date),pace:paceN(r.average_speed)}));
+    html+=`<div class="sec">Pace por Corrida</div><div class="card" style="padding:14px">${lineChart(paceData,"pace",OR,110,false)}<p style="font-size:10px;color:#5A5A5A;text-align:center;margin-top:4px">linha descendo = melhora de ritmo</p></div>`;
   }
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // OAuth callback
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get("code");
-        if (code) {
-          window.history.replaceState({}, "", window.location.pathname);
-          setStatus("Autorizando...");
-          const r = await fetch(STOK, { method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({client_id:CID,client_secret:CS,code,grant_type:"authorization_code"}) });
-          const d = await r.json();
-          if (!d.access_token) throw new Error(d.message || "Token inválido");
-          ls.set("s_tok", d);
-          await run(d);
-          setLoading(false);
-          return;
-        }
-        // Saved token
-        const saved = ls.get("s_tok");
-        if (saved) {
-          setStatus("Conectando...");
-          try { await run(saved); setLoading(false); return; }
-          catch { ls.del("s_tok"); }
-        }
-        // Redirect
-        setStatus("Abrindo o Strava...");
-        await new Promise(r => setTimeout(r, 600));
-        window.location.href = `${SAUTH}?client_id=${CID}&redirect_uri=${encodeURIComponent(REDIR)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`;
-      } catch (err) {
-        setError(err.message || "Erro desconhecido");
-        setLoading(false);
-      }
-    })();
-  }, []);
+  // Zones
+  html+=`<div class="sec">Zonas de Frequência Cardíaca</div><div class="card" style="padding:14px">${zonesHtml(zpct,STATE.zones)}</div>`;
 
-  async function refresh() {
-    setBusy(true);
-    try { const t=ls.get("s_tok"); if(t) await run(t); }
-    catch (err) { setError(err.message); }
-    setBusy(false);
-  }
-
-  if (loading && !error) return <Splash msg={status}/>;
-
-  if (error) return (
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,gap:16,background:BG}}>
-      <span style={{fontSize:40}}>⚠️</span>
-      <p style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20}}>Erro de conexão</p>
-      <p style={{fontSize:13,color:MUT,textAlign:"center",maxWidth:300,lineHeight:1.6}}>{error}</p>
-      <button onClick={() => { ls.del("s_tok"); window.location.reload(); }}
-        style={{background:OR,border:"none",borderRadius:10,padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-        Reconectar Strava
-      </button>
-    </div>
-  );
-
-  const athlete = data?.athlete;
-  const acts    = data?.acts || [];
-  const stats   = data?.stats;
-  const zones   = data?.zones || DEFAULT_ZONES;
-  const upd     = updated ? updated.toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}) : "—";
-  const TABS    = [["atual","Esta Semana"],["anterior","Semana Ant."],["meses","6 Meses"]];
-
-  return (
-    <div style={{background:BG,minHeight:"100vh",maxWidth:430,margin:"0 auto",paddingBottom:44}}>
-      {/* HEADER */}
-      <div style={{background:"#111",borderBottom:`1px solid ${BORD}`,padding:"14px 18px 12px",position:"sticky",top:0,zIndex:50}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:44,height:44,background:OR,borderRadius:12,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}}>S</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16}}>{athlete ? `${athlete.firstname} ${athlete.lastname}` : "—"}</div>
-            <div style={{fontSize:11,color:MUT}}>Strava · Dashboard de Performance</div>
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:10}}>
-          <div style={{background:"#1A1A1A",border:`1px solid ${BORD}`,borderRadius:8,padding:"4px 10px",fontSize:11,color:MUT}}>
-            Atualizado: <span style={{color:OR,fontWeight:600}}>{upd}</span>
-          </div>
-          <button onClick={refresh} disabled={busy}
-            style={{background:"transparent",border:`1px solid ${busy?"#333":OR}`,borderRadius:8,padding:"4px 12px",color:busy?"#444":OR,fontSize:11,fontWeight:600,cursor:"pointer"}}>
-            {busy ? "..." : "⟳ Atualizar dados"}
-          </button>
-        </div>
-        <div style={{display:"flex",gap:4,marginTop:10}}>
-          {TABS.map(([k,l]) => (
-            <button key={k} onClick={() => setTab(k)}
-              style={{flex:1,padding:"7px 0",borderRadius:8,fontSize:11,fontWeight:600,border:"none",cursor:"pointer",background:tab===k?OR:"#1A1A1A",color:tab===k?"#fff":MUT}}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
-      {/* CONTENT */}
-      <div style={{padding:"12px 14px 0"}}>
-        {tab !== "meses" && <p style={{fontSize:11,color:MUT,marginBottom:8}}>{weekLabel(tab==="atual"?0:1)}</p>}
-        {tab === "atual"     && <WeekView acts={acts} offset={0} zones={zones}/>}
-        {tab === "anterior"  && <WeekView acts={acts} offset={1} zones={zones}/>}
-        {tab === "meses"     && <SixView  acts={acts} stats={stats} zones={zones}/>}
-        <div style={{marginTop:18,padding:"10px 14px",background:"#111",border:`1px dashed ${BORD}`,borderRadius:10,fontSize:10,color:MUT,textAlign:"center"}}>
-          📱 Safari → Compartilhar → Adicionar à Tela de Início
-        </div>
-      </div>
-    </div>
-  );
+  container.innerHTML=html;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+// ── RENDER 6 MONTHS ───────────────────────────────────────────────────────────
+function renderSix(container){
+  const since=new Date();since.setMonth(since.getMonth()-6);
+  const recent=STATE.acts.filter(a=>new Date(a.start_date)>=since);
+  const runs=recent.filter(a=>isRun(a.type));
+  const monthly=buildMonthly(recent);
+  const streak=calcStreak(STATE.acts);
+  const totalKm=Math.round(runs.reduce((s,r)=>s+r.distance/1000,0));
+  const biggest=runs.length?[...runs].sort((a,b)=>b.distance-a.distance)[0]:null;
+  const maxKm=biggest?+(biggest.distance/1000).toFixed(1):0;
+  const avgSp=runs.length?runs.reduce((s,r)=>s+(r.average_speed||0),0)/runs.length:0;
+  // Show most recent month's pace instead of overall average
+  const recentPace=monthly.length>0?monthly[monthly.length-1].pace:null;
+  const anal=analyzeSix(monthly,totalKm,runs.length,streak,maxKm);
+  const zpct=estimateZones(recent,STATE.zones);
+  const pct=Math.min(Math.round(streak/52*100),100);
+
+  let html=`<div class="stat-grid">
+    <div class="stat-box"><div class="stat-val" style="color:${OR}">${totalKm}</div><div class="stat-lbl">km totais</div><div class="stat-sub">${runs.length} corridas</div></div>
+    <div class="stat-box"><div class="stat-val">${recentPace?paSt(recentPace):"--"}</div><div class="stat-lbl">pace atual</div><div class="stat-sub">${monthly.length>0?monthly[monthly.length-1].label:""}</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:${OR}">${streak}</div><div class="stat-lbl">semanas seguidas</div></div>
+    <div class="stat-box"><div class="stat-val">${maxKm}</div><div class="stat-lbl">maior corrida</div><div class="stat-sub">km</div></div>
+  </div>`;
+
+  html+=`<div class="streak-card">
+    <div class="streak-row"><span style="font-size:22px">🔥</span><span class="sy" style="font-size:18px"><span class="streak-num">${streak}</span> semanas consecutivas</span></div>
+    <div class="streak-sub">Meta de 52 semanas — ${pct}% · ${52-streak} restantes</div>
+    <div class="streak-track"><div class="streak-fill" style="width:${pct}%"></div></div>
+  </div>`;
+
+  if(anal){
+    html+=`<div class="sec">Análise dos 6 Meses</div><div class="anal-card"><p class="anal-intro">${esc(anal.intro)}</p>`;
+    anal.points.forEach(p=>html+=`<div class="anal-pt"><div class="anal-pt-title">${esc(p.icon)} ${esc(p.title)}</div><div class="anal-pt-text">${esc(p.text)}</div></div>`);
+    html+=`<div class="anal-concl">→ ${esc(anal.conclusion)}</div></div>`;
+  }
+
+  if(monthly.length>1){
+    html+=`<div class="sec">Ritmo Médio por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">min/km — linha descendo = melhora de ritmo</p>${lineChart(monthly,"pace",OR,115,false)}</div>`;
+    html+=`<div class="sec">Volume Mensal (km)</div><div class="card" style="padding:14px">${barChart(monthly,"km",OR,100)}</div>`;
+    html+=`<div class="sec">Frequência de Corridas</div><div class="card" style="padding:14px">${barChart(monthly,"corridas","#666",85)}</div>`;
+    if(monthly.some(m=>m.hr))html+=`<div class="sec">FC Média por Mês</div><div class="card" style="padding:14px"><p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">adaptação cardiovascular</p>${lineChart(monthly.filter(m=>m.hr),"hr",BL,110,false)}</div>`;
+  }
+
+  html+=`<div class="sec">Zonas de FC · 6 Meses</div><div class="card" style="padding:14px">${zonesHtml(zpct,STATE.zones)}</div>`;
+  container.innerHTML=html;
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────────
+function renderAll(){
+  renderWeek(document.getElementById("view-atual"),0);
+  renderWeek(document.getElementById("view-anterior"),1);
+  renderSix(document.getElementById("view-meses"));
+  switchTab(STATE.tab);
+  document.getElementById("week-label").textContent=weekLabel(0);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>
