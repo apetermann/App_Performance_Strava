@@ -605,116 +605,154 @@ function renderAll(){
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
-// ── COACH IA ─────────────────────────────────────────────────────────────────
-function getAKey(){
-  var s=[89, 90, 21, 94, 40, 57, 121, 58, 18, 0, 64, 68, 83, 200, 188, 225, 255, 219, 217, 234, 219, 237, 134, 135, 183, 235, 213, 128, 187, 197, 186, 85, 88, 103, 90, 47, 115, 101, 120, 77, 19, 42, 2, 48, 41, 7, 34, 61, 63, 211, 235, 237, 192, 249, 214, 217, 243, 245, 154, 136, 246, 150, 146, 150, 136, 156, 156, 201, 104, 58, 34, 44, 72, 76, 116, 86, 84, 44, 35, 0, 99, 56, 90, 35, 29, 4, 178, 179, 214, 200, 141, 230, 229, 198, 247, 243, 190, 227, 137, 242, 140, 168, 164, 175, 84, 110, 81, 86];
-  var k=s.map(function(c,i){return String.fromCharCode(c^((i*7+42)%256));}).join('');
-  return ls.get("ai_key")||k;
-}
-var _aiCache={};
+// ── COACH IA (análise algorítmica avançada) ─────────────────────────────────
+function _renderCoach(id, label, runs, prevRuns) {
+  var el = document.getElementById(id);
+  if (!el) return;
 
-function _coachPrompt(label,runs,prevRuns,monthly,streak,maxKm){
-  var wr=runs||[]; var pr=prevRuns||[];
-  var wkm=wr.reduce(function(s,r){return s+r.distance/1000;},0);
-  var pkm=pr.reduce(function(s,r){return s+r.distance/1000;},0);
-  var speeds=wr.filter(function(r){return r.average_speed>0;});
-  var wsp=speeds.length?speeds.reduce(function(s,r){return s+r.average_speed;},0)/speeds.length:0;
-  var pspeeds=pr.filter(function(r){return r.average_speed>0;});
-  var psp=pspeeds.length?pspeeds.reduce(function(s,r){return s+r.average_speed;},0)/pspeeds.length:0;
-  var hrs=wr.filter(function(r){return r.has_heartrate&&r.average_heartrate;});
-  var avgHR=hrs.length?Math.round(hrs.reduce(function(s,r){return s+r.average_heartrate;},0)/hrs.length):0;
-  var zpct=estimateZones(wr,STATE.zones);
-  var zStr=zpct?"Z1 "+zpct[0]+"% Z2 "+zpct[1]+"% Z3 "+zpct[2]+"% Z4 "+zpct[3]+"%":"sem dados";
-  var detail=wr.map(function(r){return fmtDate(r.start_date)+": "+(r.distance/1000).toFixed(1)+"km @ "+fmtPace(r.average_speed)+"/km"+(r.has_heartrate?" FC "+Math.round(r.average_heartrate)+"bpm":"");}).join(", ")||"Nenhuma corrida";
-  var sixCtx="";
-  if(monthly&&monthly.length>1){
-    var f=monthly[0],l=monthly[monthly.length-1];
-    sixCtx=" | Historico: ritmo "+paSt(f.pace)+"/km ("+f.label+") para "+paSt(l.pace)+"/km ("+l.label+"), streak "+streak+"sem, maior "+maxKm+"km";
-  }
-  var volChg=pkm>0?((wkm-pkm)/pkm*100).toFixed(0)+"%":"sem ref";
-  var paceChg=wsp>0&&psp>0?(paceN(wsp)>paceN(psp)?"mais lento":"mais rapido")+" "+(Math.abs(paceN(wsp)-paceN(psp))*60).toFixed(0)+"s/km":"sem ref";
-  return "Voce e um preparador fisico especializado em corredores iniciantes. Analise os dados de Alexandre Petermann (corredor ha 6 meses): PERIODO: "+label+" | CORRIDAS: "+detail+" | VOLUME: "+wkm.toFixed(1)+"km (vs "+pkm.toFixed(1)+"km, "+volChg+") | PACE: "+(wsp>0?fmtPace(wsp)+"/km":"n/a")+" ("+paceChg+") | FC: "+(avgHR?avgHR+"bpm":"n/a")+" | ZONAS: "+zStr+sixCtx+". Escreva 3 blocos curtos: **O que os dados mostram** (2 frases com numeros), **Insight do preparador** (padrao ou risco nao obvio), **Foco dos proximos 7 dias** (acao especifica com base fisiologica). Max 180 palavras. Portugues brasileiro. Sem elogios. Direto.";
-}
+  var wr = runs || [];
+  var pr = prevRuns || [];
+  var wRuns = wr.filter(function(a){ return isRun(a.type); });
+  var pRuns = pr.filter(function(a){ return isRun(a.type); });
 
-function _fillCoach(id,text,err){
-  var el=document.getElementById(id);if(!el)return;
-  if(err){el.innerHTML='<div class="coach-title">Coach IA</div><p style="color:#5A5A5A;font-size:12px">'+esc(String(err))+'</p>';return;}
-  var html=esc(text).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\n\n/g,"</p><p>").replace(/\n/g,"<br/>");
-  el.innerHTML='<div class="coach-title">Coach IA</div><div class="coach-body"><p>'+html+'</p></div>';
-}
+  // Compute metrics
+  var wkm  = wRuns.reduce(function(s,r){ return s+r.distance/1000; }, 0);
+  var pkm  = pRuns.reduce(function(s,r){ return s+r.distance/1000; }, 0);
+  var wSp  = wRuns.length ? wRuns.reduce(function(s,r){ return s+(r.average_speed||0); },0)/wRuns.length : 0;
+  var pSp  = pRuns.length ? pRuns.reduce(function(s,r){ return s+(r.average_speed||0); },0)/pRuns.length : 0;
+  var hrs  = wRuns.filter(function(r){ return r.has_heartrate && r.average_heartrate; });
+  var avgHR = hrs.length ? Math.round(hrs.reduce(function(s,r){ return s+r.average_heartrate; },0)/hrs.length) : 0;
+  var effort = wRuns.reduce(function(s,r){ return s+(r.suffer_score||0); }, 0);
+  var zpct = estimateZones(wr, STATE.zones);
 
-function _saveKey(){
-  var k=document.getElementById("_aik").value.trim();
-  if(k){ls.del("ai_key");ls.set("ai_key",k);location.reload();}
-}
-function runCoach(id,label,runs,prevRuns){
-  var ck=label+"-"+new Date().toISOString().slice(0,10);
-  if(_aiCache[ck]){_fillCoach(id,_aiCache[ck]);return;}
-  var key=getAKey();
-  if(!key){
-    var el=document.getElementById(id);
-    if(el){
-      el.innerHTML='<div class="coach-title">Coach IA</div>';
-      var p=document.createElement("p");p.style="font-size:12px;color:#CCC;margin-bottom:8px";p.textContent="Cole sua chave da Anthropic para ativar:";el.appendChild(p);
-      var inp=document.createElement("input");inp.id="_aik";inp.type="password";inp.placeholder="Cole a chave aqui...";inp.style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px";el.appendChild(inp);
-      var btn=document.createElement("button");btn.textContent="Ativar Coach IA";btn.style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer";btn.onclick=_saveKey;el.appendChild(btn);
-    }
-    return;
-  }
-  var since6=new Date();since6.setMonth(since6.getMonth()-6);
-  var r6=STATE.acts.filter(function(a){return new Date(a.start_date)>=since6;});
-  var m6=buildMonthly(r6);
-  var ru6=r6.filter(function(a){return isRun(a.type);});
-  var big6=ru6.length?ru6.slice().sort(function(a,b){return b.distance-a.distance;})[0]:null;
-  var maxKm6=big6?+(big6.distance/1000).toFixed(1):0;
-  var prompt=_coachPrompt(label,runs||[],prevRuns||[],m6,calcStreak(STATE.acts),maxKm6);
-  fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
-    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:prompt}]})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.content&&d.content[0]&&d.content[0].text){
-      _aiCache[ck]=d.content[0].text;_fillCoach(id,d.content[0].text);
-    } else {
-      var msg=d.error&&d.error.message||JSON.stringify(d);
-      // Auth error → clear bad key and show re-entry form
-      if(d.error&&(d.error.type==="authentication_error"||msg.indexOf("API key")>=0)){
-        ls.del("ai_key");
-        var el2=document.getElementById(id);
-        if(el2){
-          el2.innerHTML='<div class="coach-title">Coach IA</div>';
-          var p2=document.createElement("p");p2.style="font-size:12px;color:#FC4C02;margin-bottom:8px";p2.textContent="Chave inválida. Insira novamente:";el2.appendChild(p2);
-          var inp2=document.createElement("input");inp2.id="_aik";inp2.type="password";inp2.placeholder="Cole a chave aqui...";inp2.style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px";el2.appendChild(inp2);
-          var btn2=document.createElement("button");btn2.textContent="Salvar e Analisar";btn2.style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer";btn2.onclick=_saveKey;el2.appendChild(btn2);
-        }
-      } else {
-        _fillCoach(id,null,msg);
+  // 6-month context
+  var since6 = new Date(); since6.setMonth(since6.getMonth()-6);
+  var r6 = STATE.acts.filter(function(a){ return new Date(a.start_date)>=since6; });
+  var m6 = buildMonthly(r6);
+  var streak = calcStreak(STATE.acts);
+  var ru6 = r6.filter(function(a){ return isRun(a.type); });
+  var big6 = ru6.length ? ru6.slice().sort(function(a,b){ return b.distance-a.distance; })[0] : null;
+  var maxKm = big6 ? +(big6.distance/1000).toFixed(1) : 0;
+  var firstPace = m6.length>0 ? m6[0].pace : null;
+  var lastPace  = m6.length>0 ? m6[m6.length-1].pace : null;
+
+  var lines = [];
+
+  if (label === "Ultimos 6 meses" || label === "6 Meses") {
+    // ── 6-MONTH ANALYSIS ──
+    if (firstPace && lastPace) {
+      var imp = firstPace - lastPace;
+      var impSec = Math.round(imp * 60);
+      lines.push("**Evolução de ritmo: " + impSec + " segundos/km em " + m6.length + " meses.**");
+      if (imp > 1.5) {
+        lines.push("Isso coloca você no percentil superior de corredores iniciantes. A literatura de fisiologia mostra que iniciantes evoluem em média 30-45s/km nos primeiros 6 meses com treino consistente — você superou essa curva.");
+      } else if (imp > 0.5) {
+        lines.push("Progressão dentro da curva esperada para iniciantes. O desenvolvimento aeróbico leva de 8 a 12 semanas para se consolidar — você está nesse ciclo correto.");
       }
     }
-  }).catch(function(e){_fillCoach(id,null,"Erro de rede: "+e.message);});
+    if (streak >= 20) {
+      lines.push("**" + streak + " semanas consecutivas** é o ativo mais valioso do seu treino. Consistência supera intensidade em qualquer protocolo de desenvolvimento de base aeróbica.");
+    }
+    var avgVol = m6.length ? (ru6.reduce(function(s,r){return s+r.distance/1000;},0)/m6.length).toFixed(1) : 0;
+    if (avgVol > 0) {
+      lines.push("Volume médio de *" + avgVol + " km/mês*. Para cruzar a barreira do 10K, o alvo é 50-60 km/mês com corrida longa semanal progressiva.");
+    }
+    if (zpct && zpct[0] > 50) {
+      lines.push("**Insight fisiológico:** " + zpct[0] + "% do tempo em Z1 indica que você está construindo base aeróbica corretamente. Esse é o fundamento para qualquer evolução futura de velocidade.");
+    }
+    if (maxKm < 10) {
+      lines.push("**Foco dos próximos 60 dias:** aumentar a corrida longa de " + maxKm + " km para " + (Math.ceil(maxKm)+2) + " km, adicionando 1 km a cada 2 semanas. Com 10K de base, o ritmo médio tende a cair 15-20s/km automaticamente.");
+    }
+
+  } else {
+    // ── WEEK ANALYSIS ──
+    var isCurrentWeek = label === "Esta semana";
+
+    if (wRuns.length === 0) {
+      lines.push(isCurrentWeek
+        ? "**Semana em construção** — nenhuma corrida registrada ainda. O descanso ativo é parte do processo adaptativo. A síntese proteica muscular ocorre principalmente fora do treino."
+        : "**Semana de descanso ou intercorrência.** O sistema cardiovascular e musculoesquelético usa períodos de baixa carga para consolidar adaptações das semanas anteriores.");
+    } else {
+      // Volume comparison
+      if (pkm > 0) {
+        var chg = ((wkm - pkm) / pkm * 100);
+        if (Math.abs(chg) < 10) {
+          lines.push("**Volume consistente:** *" + wkm.toFixed(1) + " km* — variação de " + chg.toFixed(0) + "% em relação à semana anterior, dentro da margem de 10% recomendada pela regra de progressão segura.");
+        } else if (chg > 10) {
+          lines.push("**Aumento de volume de " + chg.toFixed(0) + "%** (*" + pkm.toFixed(1) + " → " + wkm.toFixed(1) + " km*). Acima da regra dos 10%. Monitore sinais de fadiga acumulada — queda de rendimento, sono alterado ou sensação de pernas pesadas.");
+        } else {
+          lines.push("**Semana de carga reduzida** (*" + wkm.toFixed(1) + " km* vs " + pkm.toFixed(1) + " km). " + (chg < -25 ? "Descarga programada? Se sim, correto — semanas de recuperação evitam o overtraining e consolidam adaptações." : "Volume ligeiramente menor. Normal em semanas de qualidade."));
+        }
+      } else {
+        lines.push("**Semana com *" + wkm.toFixed(1) + " km* em " + wRuns.length + " corrida" + (wRuns.length>1?"s":"") + ".**");
+      }
+
+      // Pace insight
+      if (wSp > 0) {
+        var wPaceStr = fmtPace(wSp);
+        if (pSp > 0) {
+          var paceDiff = (paceN(wSp) - paceN(pSp)) * 60;
+          if (paceDiff < -5) {
+            lines.push("**Ritmo evoluiu " + Math.abs(paceDiff).toFixed(0) + "s/km** em relação à semana anterior (*" + fmtPace(pSp) + " → " + wPaceStr + "/km*). Sinal de adaptação cardiovascular — o VO2 relativo está aumentando.");
+          } else if (paceDiff > 10) {
+            lines.push("**Ritmo mais conservador esta semana** (*" + wPaceStr + "/km* vs *" + fmtPace(pSp) + "/km*). Pode indicar fadiga residual ou treino de recuperação intencional — ambos válidos dependendo do contexto.");
+          } else {
+            lines.push("**Ritmo estável em *" + wPaceStr + "/km*** — consistência de pace ao longo das semanas é indicador de eficiência metabólica em desenvolvimento.");
+          }
+        }
+      }
+
+      // HR and zones insight
+      if (avgHR > 0 && zpct) {
+        var z1=zpct[0], z2=zpct[1], z3=zpct[2];
+        if (z1 + z2 > 75) {
+          lines.push("**Distribuição de intensidade correta:** *" + (z1+z2) + "% em Z1-Z2*. O modelo 80/20 de periodização (80% em baixa intensidade, 20% em alta) é o mais validado para desenvolvimento aeróbico em corredores de base.");
+        } else if (z3 > 30) {
+          lines.push("**Atenção: " + z3 + "% do tempo em Z3 (aeróbico intenso).** Alta proporção de treino em zona intermediária pode gerar fadiga sem o estímulo necessário para adaptação. Considere polarizar: mais Z1-Z2 ou mais Z4-Z5, menos Z3.");
+        }
+      }
+
+      // Specific recommendation
+      if (effort > 150) {
+        lines.push("**Próximos 7 dias:** priorize recuperação ativa (caminhadas, mobilidade). Semana de alta carga requer 48-72h de absorção. Dorme 7-9h — é onde 80% da adaptação ao treino acontece.");
+      } else if (wRuns.length >= 3) {
+        lines.push("**Próximos 7 dias:** mantenha a frequência de 3 corridas. Adicione 1 km na corrida mais longa do sábado — progressive overload controlado é a forma mais segura de elevar a capacidade aeróbica.");
+      } else if (wRuns.length < 3 && isCurrentWeek) {
+        lines.push("**Foco desta semana:** fechar com pelo menos 3 corridas. Frequência > distância nesta fase — 3× de 5 km é mais eficiente que 1× de 15 km para construção de base.");
+      } else {
+        lines.push("**Próximos 7 dias:** adicione uma corrida de qualidade (fartlek curto: 5× 1 min mais rápido + 2 min fácil). Estímulos de velocidade ocasionais ativam recrutamento de fibras rápidas sem sacrificar a base aeróbica.");
+      }
+    }
+  }
+
+  // Render
+  var html = '<div class="coach-title">Coach IA · Análise Personalizada</div><div class="coach-body">';
+  lines.forEach(function(line) {
+    var formatted = esc(line)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em style="color:#FC4C02;font-style:normal;font-weight:600">$1</em>');
+    html += '<p>' + formatted + '</p>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 // Patch renderAll to add coach cards after render
-var _origRenderAll=renderAll;
-renderAll=function(){
+var _origRenderAll = renderAll;
+renderAll = function() {
   _origRenderAll();
-  // Add coach cards to each view
-  ["view-atual","view-anterior","view-meses"].forEach(function(vid){
-    var c=document.getElementById(vid);
-    if(!c)return;
-    var offset=vid==="view-atual"?0:vid==="view-anterior"?1:-1;
-    var cid="coach-"+vid;
-    var div=document.createElement("div");
-    div.className="sec";div.textContent="Coach IA";c.appendChild(div);
-    var card=document.createElement("div");
-    card.className="coach-card";
-    card.id=cid;
-    card.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:#5A5A5A;font-size:13px"><span class="coach-spin">⟳</span> Analisando seus dados...</div>';
-    c.appendChild(card);
-    var label=offset===0?"Esta semana":offset===1?"Semana passada":"Ultimos 6 meses";
-    var wa=offset>=0?filterWeek(STATE.acts,offset):STATE.acts.filter(function(a){return isRun(a.type);});
-    var pa=offset>=0?filterWeek(STATE.acts,offset+1):[];
-    setTimeout(function(){runCoach(cid,label,wa,pa);},200);
+  var views = [
+    {vid:"view-atual",    label:"Esta semana",    offset:0},
+    {vid:"view-anterior", label:"Semana passada", offset:1},
+    {vid:"view-meses",    label:"Ultimos 6 meses",offset:-1}
+  ];
+  views.forEach(function(v) {
+    var c = document.getElementById(v.vid); if (!c) return;
+    var div = document.createElement("div"); div.className="sec"; div.textContent="Coach IA"; c.appendChild(div);
+    var card = document.createElement("div"); card.className="coach-card"; card.id="coach-"+v.vid; c.appendChild(card);
+    var wa = v.offset>=0 ? filterWeek(STATE.acts,v.offset) : STATE.acts;
+    var pa = v.offset>=0 ? filterWeek(STATE.acts,v.offset+1) : [];
+    _renderCoach("coach-"+v.vid, v.label, wa, pa);
   });
 };
 
