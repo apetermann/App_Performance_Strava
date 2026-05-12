@@ -90,7 +90,13 @@
     /* Content */
     #content{padding:12px 14px 0}
     .week-label{font-size:11px;color:#5A5A5A;margin-bottom:8px}
-    .install-hint{margin-top:18px;padding:10px 14px;background:#111;border:1px dashed #282828;border-radius:10px;font-size:10px;color:#5A5A5A;text-align:center}
+    @keyframes cspin{to{transform:rotate(360deg)}}
+  .coach-card{background:#171717;border:1px solid #282828;border-radius:14px;padding:16px;border-left:3px solid #00C896;margin-top:4px}
+  .coach-spin{display:inline-block;animation:cspin 1.2s linear infinite}
+  .coach-title{font-family:'Syne',sans-serif;font-weight:800;font-size:10px;color:#00C896;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+  .coach-body p{font-size:13px;line-height:1.75;color:#E0E0E0;margin-bottom:8px}
+  .coach-body strong{color:#00C896}
+  .install-hint{margin-top:18px;padding:10px 14px;background:#111;border:1px dashed #282828;border-radius:10px;font-size:10px;color:#5A5A5A;text-align:center}
 
     /* Error */
     #error-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:16px;text-align:center}
@@ -147,6 +153,20 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
+// Global error handler — catches any JS crash and shows it
+window.onerror=function(msg,src,line,col,err){
+  document.getElementById("splash-msg").textContent="Erro JS: "+msg+" (L"+line+")";
+  const btn=document.createElement("button");
+  btn.textContent="Recarregar";
+  btn.style="margin-top:16px;background:#FC4C02;border:none;border-radius:10px;padding:10px 24px;color:#fff;font-size:13px;font-weight:700;cursor:pointer";
+  btn.onclick=function(){location.reload();};
+  document.getElementById("splash").appendChild(btn);
+  return true;
+};
+window.addEventListener("unhandledrejection",function(e){
+  document.getElementById("splash-msg").textContent="Erro async: "+(e.reason&&e.reason.message||e.reason||"desconhecido");
+});
+
 const CID   = "235154";
 const CS    = "503e9c222e53cac459e0788ddac6f23ef692e1a2";
 const REDIR = location.origin + location.pathname;
@@ -180,15 +200,19 @@ function el(tag,attrs,html){
 let STATE={athlete:null,acts:[],stats:null,zones:DZ,tab:"atual"};
 
 // ── STRAVA API ────────────────────────────────────────────────────────────────
+function fetchT(url,opts,ms=12000){
+  const c=new AbortController(),t=setTimeout(()=>c.abort("timeout"),ms);
+  return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(t));
+}
 async function stravaGet(path,token){
   let tok=token;
   if(Date.now()/1000>=(tok.expires_at||0)-60){
-    const r=await fetch(STOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client_id:CID,client_secret:CS,refresh_token:tok.refresh_token,grant_type:"refresh_token"})});
+    const r=await fetchT(STOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client_id:CID,client_secret:CS,refresh_token:tok.refresh_token,grant_type:"refresh_token"})});
     const d=await r.json();
     if(!d.access_token)throw new Error("Sessão expirada — reconecte");
     ls.set("s_tok",d);tok=d;
   }
-  const r=await fetch(SAPI+path,{headers:{Authorization:`Bearer ${tok.access_token}`}});
+  const r=await fetchT(SAPI+path,{headers:{Authorization:`Bearer ${tok.access_token}`}});
   if(!r.ok)throw new Error(`Strava ${r.status}`);
   return r.json();
 }
@@ -207,6 +231,17 @@ async function loadAll(token){
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
+  // Show escape button after 10s if stuck
+  var _et=setTimeout(function(){
+    var sp=document.getElementById("splash");
+    if(sp&&sp.style.display!=="none"){
+      var b=document.createElement("button");
+      b.textContent="Reconectar Strava";
+      b.style="margin-top:20px;background:#FC4C02;border:none;border-radius:10px;padding:10px 24px;color:#fff;font-size:13px;font-weight:700;cursor:pointer";
+      b.onclick=function(){ls.del("s_tok");location.reload();};
+      sp.appendChild(b);
+    }
+  },10000);
   try{
     const p=new URLSearchParams(location.search);
     const code=p.get("code");
@@ -223,12 +258,12 @@ async function init(){
     const saved=ls.get("s_tok");
     if(saved){
       setStatus("Conectando...");
-      try{await loadAll(saved);showMain();return;}
+      try{await loadAll(saved);clearTimeout(_et);showMain();return;}
       catch(e){ls.del("s_tok");}
     }
     setStatus("Abrindo o Strava...");
     setTimeout(()=>{location.href=`${SAUTH}?client_id=${CID}&redirect_uri=${encodeURIComponent(REDIR)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`;},700);
-  }catch(err){showError(err.message);}
+  }catch(err){clearTimeout(_et);showError(err.message||String(err));}
 }
 
 function setStatus(msg){document.getElementById("splash-msg").textContent=msg;}
@@ -570,6 +605,90 @@ function renderAll(){
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
+// ── COACH IA ─────────────────────────────────────────────────────────────────
+function getAKey(){return ls.get("ai_key")||"";}
+var _aiCache={};
+
+function _coachPrompt(label,runs,prevRuns,monthly,streak,maxKm){
+  var wr=runs||[]; var pr=prevRuns||[];
+  var wkm=wr.reduce(function(s,r){return s+r.distance/1000;},0);
+  var pkm=pr.reduce(function(s,r){return s+r.distance/1000;},0);
+  var speeds=wr.filter(function(r){return r.average_speed>0;});
+  var wsp=speeds.length?speeds.reduce(function(s,r){return s+r.average_speed;},0)/speeds.length:0;
+  var pspeeds=pr.filter(function(r){return r.average_speed>0;});
+  var psp=pspeeds.length?pspeeds.reduce(function(s,r){return s+r.average_speed;},0)/pspeeds.length:0;
+  var hrs=wr.filter(function(r){return r.has_heartrate&&r.average_heartrate;});
+  var avgHR=hrs.length?Math.round(hrs.reduce(function(s,r){return s+r.average_heartrate;},0)/hrs.length):0;
+  var zpct=estimateZones(wr,STATE.zones);
+  var zStr=zpct?"Z1 "+zpct[0]+"% Z2 "+zpct[1]+"% Z3 "+zpct[2]+"% Z4 "+zpct[3]+"%":"sem dados";
+  var detail=wr.map(function(r){return fmtDate(r.start_date)+": "+(r.distance/1000).toFixed(1)+"km @ "+fmtPace(r.average_speed)+"/km"+(r.has_heartrate?" FC "+Math.round(r.average_heartrate)+"bpm":"");}).join(", ")||"Nenhuma corrida";
+  var sixCtx="";
+  if(monthly&&monthly.length>1){
+    var f=monthly[0],l=monthly[monthly.length-1];
+    sixCtx=" | Historico: ritmo "+paSt(f.pace)+"/km ("+f.label+") para "+paSt(l.pace)+"/km ("+l.label+"), streak "+streak+"sem, maior "+maxKm+"km";
+  }
+  var volChg=pkm>0?((wkm-pkm)/pkm*100).toFixed(0)+"%":"sem ref";
+  var paceChg=wsp>0&&psp>0?(paceN(wsp)>paceN(psp)?"mais lento":"mais rapido")+" "+(Math.abs(paceN(wsp)-paceN(psp))*60).toFixed(0)+"s/km":"sem ref";
+  return "Voce e um preparador fisico especializado em corredores iniciantes. Analise os dados de Alexandre Petermann (corredor ha 6 meses): PERIODO: "+label+" | CORRIDAS: "+detail+" | VOLUME: "+wkm.toFixed(1)+"km (vs "+pkm.toFixed(1)+"km, "+volChg+") | PACE: "+(wsp>0?fmtPace(wsp)+"/km":"n/a")+" ("+paceChg+") | FC: "+(avgHR?avgHR+"bpm":"n/a")+" | ZONAS: "+zStr+sixCtx+". Escreva 3 blocos curtos: **O que os dados mostram** (2 frases com numeros), **Insight do preparador** (padrao ou risco nao obvio), **Foco dos proximos 7 dias** (acao especifica com base fisiologica). Max 180 palavras. Portugues brasileiro. Sem elogios. Direto.";
+}
+
+function _fillCoach(id,text,err){
+  var el=document.getElementById(id);if(!el)return;
+  if(err){el.innerHTML='<div class="coach-title">Coach IA</div><p style="color:#5A5A5A;font-size:12px">'+esc(String(err))+'</p>';return;}
+  var html=esc(text).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\n\n/g,"</p><p>").replace(/\n/g,"<br/>");
+  el.innerHTML='<div class="coach-title">Coach IA</div><div class="coach-body"><p>'+html+'</p></div>';
+}
+
+function runCoach(id,label,runs,prevRuns){
+  var ck=label+"-"+new Date().toISOString().slice(0,10);
+  if(_aiCache[ck]){_fillCoach(id,_aiCache[ck]);return;}
+  var key=getAKey();
+  if(!key){
+    var el=document.getElementById(id);
+    if(el)el.innerHTML='<div class="coach-title">Coach IA</div><p style="font-size:12px;color:#CCC;margin-bottom:8px">Cole sua chave da Anthropic para ativar a analise inteligente:</p><input id="aik_'+id+'" type="password" placeholder="Cole a chave aqui..." style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px"/><button onclick="var k=document.getElementById('aik_'+id+'').value.trim();if(k){ls.set('ai_key',k);runCoach(''+id+'',''+label+'',null,null);}" style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Ativar Coach IA</button>';
+    return;
+  }
+  var since6=new Date();since6.setMonth(since6.getMonth()-6);
+  var r6=STATE.acts.filter(function(a){return new Date(a.start_date)>=since6;});
+  var m6=buildMonthly(r6);
+  var ru6=r6.filter(function(a){return isRun(a.type);});
+  var big6=ru6.length?ru6.slice().sort(function(a,b){return b.distance-a.distance;})[0]:null;
+  var maxKm6=big6?+(big6.distance/1000).toFixed(1):0;
+  var prompt=_coachPrompt(label,runs||[],prevRuns||[],m6,calcStreak(STATE.acts),maxKm6);
+  fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:prompt}]})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.content&&d.content[0]&&d.content[0].text){_aiCache[ck]=d.content[0].text;_fillCoach(id,d.content[0].text);}
+    else _fillCoach(id,null,d.error&&d.error.message||"Erro API");
+  }).catch(function(e){_fillCoach(id,null,e.message);});
+}
+
+// Patch renderAll to add coach cards after render
+var _origRenderAll=renderAll;
+renderAll=function(){
+  _origRenderAll();
+  // Add coach cards to each view
+  ["view-atual","view-anterior","view-meses"].forEach(function(vid){
+    var c=document.getElementById(vid);
+    if(!c)return;
+    var offset=vid==="view-atual"?0:vid==="view-anterior"?1:-1;
+    var cid="coach-"+vid;
+    var div=document.createElement("div");
+    div.className="sec";div.textContent="Coach IA";c.appendChild(div);
+    var card=document.createElement("div");
+    card.className="coach-card";
+    card.id=cid;
+    card.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:#5A5A5A;font-size:13px"><span class="coach-spin">⟳</span> Analisando seus dados...</div>';
+    c.appendChild(card);
+    var label=offset===0?"Esta semana":offset===1?"Semana passada":"Ultimos 6 meses";
+    var wa=offset>=0?filterWeek(STATE.acts,offset):STATE.acts.filter(function(a){return isRun(a.type);});
+    var pa=offset>=0?filterWeek(STATE.acts,offset+1):[];
+    setTimeout(function(){runCoach(cid,label,wa,pa);},200);
+  });
+};
+
 init();
 </script>
 </body>
