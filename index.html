@@ -639,13 +639,22 @@ function _fillCoach(id,text,err){
   el.innerHTML='<div class="coach-title">Coach IA</div><div class="coach-body"><p>'+html+'</p></div>';
 }
 
+function _saveKey(){
+  var k=document.getElementById("_aik").value.trim();
+  if(k){ls.set("ai_key",k);location.reload();}
+}
 function runCoach(id,label,runs,prevRuns){
   var ck=label+"-"+new Date().toISOString().slice(0,10);
   if(_aiCache[ck]){_fillCoach(id,_aiCache[ck]);return;}
   var key=getAKey();
   if(!key){
     var el=document.getElementById(id);
-    if(el)el.innerHTML='<div class="coach-title">Coach IA</div><p style="font-size:12px;color:#CCC;margin-bottom:8px">Cole sua chave da Anthropic para ativar a analise inteligente:</p><input id="aik_'+id+'" type="password" placeholder="Cole a chave aqui..." style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px"/><button onclick="var k=document.getElementById('aik_'+id+'').value.trim();if(k){ls.set('ai_key',k);runCoach(''+id+'',''+label+'',null,null);}" style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Ativar Coach IA</button>';
+    if(el){
+      el.innerHTML='<div class="coach-title">Coach IA</div>';
+      var p=document.createElement("p");p.style="font-size:12px;color:#CCC;margin-bottom:8px";p.textContent="Cole sua chave da Anthropic para ativar:";el.appendChild(p);
+      var inp=document.createElement("input");inp.id="_aik";inp.type="password";inp.placeholder="Cole a chave aqui...";inp.style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px";el.appendChild(inp);
+      var btn=document.createElement("button");btn.textContent="Ativar Coach IA";btn.style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer";btn.onclick=_saveKey;el.appendChild(btn);
+    }
     return;
   }
   var since6=new Date();since6.setMonth(since6.getMonth()-6);
