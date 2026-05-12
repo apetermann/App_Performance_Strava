@@ -641,7 +641,7 @@ function _fillCoach(id,text,err){
 
 function _saveKey(){
   var k=document.getElementById("_aik").value.trim();
-  if(k){ls.set("ai_key",k);location.reload();}
+  if(k){ls.del("ai_key");ls.set("ai_key",k);location.reload();}
 }
 function runCoach(id,label,runs,prevRuns){
   var ck=label+"-"+new Date().toISOString().slice(0,10);
@@ -669,9 +669,25 @@ function runCoach(id,label,runs,prevRuns){
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
     body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:prompt}]})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.content&&d.content[0]&&d.content[0].text){_aiCache[ck]=d.content[0].text;_fillCoach(id,d.content[0].text);}
-    else _fillCoach(id,null,d.error&&d.error.message||"Erro API");
-  }).catch(function(e){_fillCoach(id,null,e.message);});
+    if(d.content&&d.content[0]&&d.content[0].text){
+      _aiCache[ck]=d.content[0].text;_fillCoach(id,d.content[0].text);
+    } else {
+      var msg=d.error&&d.error.message||JSON.stringify(d);
+      // Auth error → clear bad key and show re-entry form
+      if(d.error&&(d.error.type==="authentication_error"||msg.indexOf("API key")>=0)){
+        ls.del("ai_key");
+        var el2=document.getElementById(id);
+        if(el2){
+          el2.innerHTML='<div class="coach-title">Coach IA</div>';
+          var p2=document.createElement("p");p2.style="font-size:12px;color:#FC4C02;margin-bottom:8px";p2.textContent="Chave inválida. Insira novamente:";el2.appendChild(p2);
+          var inp2=document.createElement("input");inp2.id="_aik";inp2.type="password";inp2.placeholder="Cole a chave aqui...";inp2.style="width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:8px;color:#F0F0F0;font-size:12px;margin-bottom:8px";el2.appendChild(inp2);
+          var btn2=document.createElement("button");btn2.textContent="Salvar e Analisar";btn2.style="background:#FC4C02;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer";btn2.onclick=_saveKey;el2.appendChild(btn2);
+        }
+      } else {
+        _fillCoach(id,null,msg);
+      }
+    }
+  }).catch(function(e){_fillCoach(id,null,"Erro de rede: "+e.message);});
 }
 
 // Patch renderAll to add coach cards after render
