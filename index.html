@@ -299,7 +299,7 @@ function showMain(){
 // ── TABS ─────────────────────────────────────────────────────────────────────
 function switchTab(tab){
   STATE.tab=tab;
-  ["atual","anterior","meses"].forEach(t=>{
+  ["atual","anterior","meses","corpo"].forEach(t=>{
     document.getElementById(`tab-${t}`).className="tab"+(t===tab?" active":"");
     document.getElementById(`view-${t}`).style.display=t===tab?"block":"none";
   });
