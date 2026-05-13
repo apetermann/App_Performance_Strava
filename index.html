@@ -139,6 +139,7 @@
         <button class="tab active" onclick="switchTab('atual')" id="tab-atual">Esta Semana</button>
         <button class="tab" onclick="switchTab('anterior')" id="tab-anterior">Semana Ant.</button>
         <button class="tab" onclick="switchTab('meses')" id="tab-meses">6 Meses</button>
+        <button class="tab" onclick="switchTab('corpo')" id="tab-corpo">Corpo</button>
       </div>
     </div>
     <div id="content">
@@ -146,6 +147,7 @@
       <div id="view-atual"></div>
       <div id="view-anterior" style="display:none"></div>
       <div id="view-meses" style="display:none"></div>
+      <div id="view-corpo" style="display:none"></div>
       <div class="install-hint">📱 Safari → Compartilhar → Adicionar à Tela de Início</div>
     </div>
   </div>
@@ -304,6 +306,7 @@ function switchTab(tab){
   if(tab==="atual"){wl.textContent=weekLabel(0);wl.style.display="block";}
   else if(tab==="anterior"){wl.textContent=weekLabel(1);wl.style.display="block";}
   else wl.style.display="none";
+  if(tab==="corpo")renderCorpo();
 }
 
 // ── WEEK HELPERS ──────────────────────────────────────────────────────────────
@@ -746,6 +749,7 @@ renderAll = function() {
     {vid:"view-anterior", label:"Semana passada", offset:1},
     {vid:"view-meses",    label:"Ultimos 6 meses",offset:-1}
   ];
+  // corpo handled by renderCorpo()
   views.forEach(function(v) {
     var c = document.getElementById(v.vid); if (!c) return;
     var div = document.createElement("div"); div.className="sec"; div.textContent="Coach IA"; c.appendChild(div);
@@ -755,6 +759,207 @@ renderAll = function() {
     _renderCoach("coach-"+v.vid, v.label, wa, pa);
   });
 };
+
+var RENPHO=[
+  {d:"2025-09-22",p:141.8,imc:42.3,gord:46.7,musc:34.1,magra:75.58,visc:24,agua:38.5,tmb:2023},
+  {d:"2025-09-26",p:137.5,imc:41.1,gord:44.7,musc:35.4,magra:76.04,visc:22,agua:39.9,tmb:2032},
+  {d:"2025-09-30",p:136.6,imc:40.8,gord:44.3,musc:35.7,magra:76.09,visc:22,agua:40.2,tmb:2023},
+  {d:"2025-10-03",p:135.6,imc:40.5,gord:43.9,musc:36.0,magra:76.07,visc:22,agua:40.5,tmb:2010},
+  {d:"2025-10-09",p:135.9,imc:40.6,gord:44.0,musc:35.9,magra:76.10,visc:22,agua:40.4,tmb:2010},
+  {d:"2025-10-13",p:135.4,imc:40.4,gord:43.8,musc:36.0,magra:76.09,visc:22,agua:40.6,tmb:2006},
+  {d:"2025-10-17",p:132.2,imc:39.5,gord:42.3,musc:37.0,magra:76.28,visc:22,agua:41.7,tmb:2023},
+  {d:"2025-10-24",p:130.2,imc:38.9,gord:41.4,musc:37.6,magra:76.30,visc:21,agua:42.3,tmb:2002},
+  {d:"2025-10-31",p:129.6,imc:38.7,gord:41.1,musc:37.8,magra:76.33,visc:21,agua:42.5,tmb:1989},
+  {d:"2025-11-11",p:129.3,imc:38.6,gord:41.0,musc:37.9,magra:76.29,visc:21,agua:42.6,tmb:1989},
+  {d:"2025-11-14",p:127.1,imc:38.0,gord:40.0,musc:38.5,magra:76.26,visc:20,agua:43.3,tmb:2014},
+  {d:"2025-11-21",p:126.3,imc:37.7,gord:39.6,musc:38.8,magra:76.29,visc:20,agua:43.6,tmb:2006},
+  {d:"2025-11-28",p:125.7,imc:37.5,gord:39.3,musc:39.0,magra:76.30,visc:20,agua:43.8,tmb:1997},
+  {d:"2025-12-05",p:125.2,imc:37.4,gord:39.1,musc:39.1,magra:76.25,visc:20,agua:44.0,tmb:1993},
+  {d:"2025-12-12",p:126.3,imc:37.7,gord:39.6,musc:38.8,magra:76.29,visc:20,agua:43.6,tmb:2006},
+  {d:"2025-12-20",p:122.3,imc:36.5,gord:37.8,musc:40.0,magra:76.07,visc:18,agua:44.9,tmb:2006},
+  {d:"2025-12-27",p:123.3,imc:36.8,gord:38.3,musc:39.6,magra:76.08,visc:19,agua:44.5,tmb:2023},
+  {d:"2026-01-02",p:124.7,imc:37.2,gord:38.9,musc:39.2,magra:76.19,visc:19,agua:44.1,tmb:2036},
+  {d:"2026-01-09",p:120.8,imc:36.1,gord:37.1,musc:40.4,magra:75.98,visc:18,agua:45.4,tmb:1984},
+  {d:"2026-01-16",p:118.8,imc:35.5,gord:36.2,musc:41.0,magra:75.79,visc:18,agua:46.1,tmb:2010},
+  {d:"2026-02-07",p:120.9,imc:36.1,gord:37.2,musc:40.3,magra:75.93,visc:18,agua:45.3,tmb:1989},
+  {d:"2026-02-13",p:118.5,imc:35.4,gord:36.1,musc:41.1,magra:75.72,visc:18,agua:46.1,tmb:2006},
+  {d:"2026-02-20",p:119.8,imc:35.8,gord:36.7,musc:40.7,magra:75.83,visc:18,agua:45.7,tmb:2023},
+  {d:"2026-02-26",p:120.1,imc:35.9,gord:36.8,musc:40.6,magra:75.90,visc:18,agua:45.6,tmb:2027},
+  {d:"2026-02-27",p:120.1,imc:35.9,gord:36.8,musc:40.6,magra:75.90,visc:18,agua:45.6,tmb:2027},
+  {d:"2026-03-06",p:120.2,imc:35.9,gord:36.8,musc:40.6,magra:75.97,visc:18,agua:45.6,tmb:2032},
+  {d:"2026-03-13",p:121.1,imc:36.2,gord:37.3,musc:40.3,magra:75.93,visc:18,agua:45.3,tmb:1989},
+  {d:"2026-03-21",p:121.9,imc:36.4,gord:37.6,musc:40.1,magra:76.07,visc:18,agua:45.0,tmb:2002},
+  {d:"2026-03-27",p:119.9,imc:35.8,gord:36.7,musc:40.7,magra:75.90,visc:18,agua:45.7,tmb:2027},
+  {d:"2026-04-17",p:118.6,imc:35.4,gord:22.1,musc:50.2,magra:92.39,visc:17,agua:56.2,tmb:2368},
+  {d:"2026-04-24",p:119.8,imc:35.8,gord:22.4,musc:50.0,magra:92.96,visc:17,agua:56.0,tmb:2385},
+  {d:"2026-05-01",p:118.6,imc:35.4,gord:22.1,musc:50.2,magra:92.39,visc:17,agua:56.2,tmb:2368},
+  {d:"2026-05-08",p:119.5,imc:35.7,gord:22.3,musc:50.1,magra:92.85,visc:17,agua:56.1,tmb:2381},
+];
+
+function renderCorpo(){
+  var c=document.getElementById("view-corpo");
+  if(!c||c.dataset.rendered)return;
+  c.dataset.rendered="1";
+
+  // Sort ascending
+  var data=RENPHO.slice().sort(function(a,b){return a.d<b.d?-1:1;});
+  var recalib="2026-04-10"; // calibration change date
+  var pre=data.filter(function(r){return r.d<recalib;});
+  var pos=data.filter(function(r){return r.d>=recalib;});
+  var cur=data[data.length-1];
+  var first=data[0];
+
+  // Weight loss summary
+  var totalLoss=(first.p-cur.p).toFixed(1);
+  var runStart=data.filter(function(r){return r.d>="2025-11-01";})[0];
+  var runLoss=runStart?(runStart.p-cur.p).toFixed(1):"—";
+
+  var html='';
+
+  // ── Summary cards ──
+  html+='<div class="sec">Composição Corporal</div>';
+  html+='<div class="stat-grid">';
+  html+='<div class="stat-box"><div class="stat-val" style="color:#FC4C02">'+cur.p+'</div><div class="stat-lbl">kg atual</div></div>';
+  html+='<div class="stat-box"><div class="stat-val" style="color:#00C896">-'+totalLoss+'</div><div class="stat-lbl">kg total perdido</div><div class="stat-sub">'+first.d.slice(0,7)+' → hoje</div></div>';
+  html+='<div class="stat-box"><div class="stat-val" style="color:#00C896">-'+runLoss+'</div><div class="stat-lbl">kg com corridas</div><div class="stat-sub">nov/25 → hoje</div></div>';
+  html+='<div class="stat-box"><div class="stat-val">'+cur.imc+'</div><div class="stat-lbl">IMC atual</div></div>';
+  html+='</div>';
+
+  // Recent body composition (post-calibration)
+  if(pos.length>0){
+    var latGord=pos[pos.length-1].gord;
+    var latMusc=pos[pos.length-1].musc;
+    var latAgua=pos[pos.length-1].agua;
+    html+='<div class="sec">Bio-Impedância (pós-calibração)</div>';
+    html+='<div class="stat-grid">';
+    html+='<div class="stat-box"><div class="stat-val" style="color:#EF4444">'+latGord+'%</div><div class="stat-lbl">gordura corporal</div></div>';
+    html+='<div class="stat-box"><div class="stat-val" style="color:#3B82F6">'+latMusc+'%</div><div class="stat-lbl">músculo esquelético</div></div>';
+    html+='<div class="stat-box"><div class="stat-val">'+latAgua+'%</div><div class="stat-lbl">água corporal</div></div>';
+    html+='<div class="stat-box"><div class="stat-val">'+pos[pos.length-1].tmb+'</div><div class="stat-lbl">TMB kcal/dia</div></div>';
+    html+='</div>';
+  }
+
+  // ── Weight chart (all data) ──
+  html+='<div class="sec">Evolução do Peso</div>';
+  html+='<div class="card" style="padding:14px">';
+  html+='<p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">kg — linha descendo = perda de peso</p>';
+  var weightData=data.map(function(r){return {label:r.d.slice(5),peso:r.p};});
+  html+=svgLine(weightData,"peso","#FC4C02",130,false);
+  html+='</div>';
+
+  // ── Pre-calibration body fat trend ──
+  if(pre.length>1){
+    html+='<div class="sec">Gordura Corporal — set/25 a mar/26</div>';
+    html+='<div class="card" style="padding:14px">';
+    html+='<p style="font-size:10px;color:#5A5A5A;margin-bottom:8px">% — linha descendo = melhora</p>';
+    var bfData=pre.map(function(r){return{label:r.d.slice(5),gord:r.gord};});
+    html+=svgLine(bfData,"gord","#EF4444",120,false);
+    html+='</div>';
+  }
+
+  // ── Correlation: running km vs weight loss ──
+  html+='<div class="sec">Corridas × Variação de Peso</div>';
+  html+='<div class="card" style="padding:14px">';
+  html+=corpoCorrelation(data);
+  html+='</div>';
+
+  // ── Coach analysis ──
+  html+='<div class="sec">Coach IA · Composição Corporal</div>';
+  html+='<div class="coach-card">';
+  html+=coachCorpo(cur,first,runStart,totalLoss,runLoss,pre,pos);
+  html+='</div>';
+
+  c.innerHTML=html;
+}
+
+function svgLine(data,dKey,color,height,reversed){
+  var pts=data.filter(function(d){return d[dKey]!=null;});
+  if(pts.length<2)return"";
+  var vals=pts.map(function(d){return d[dKey];});
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),rng=mx-mn||1;
+  var W=300,LP=38,RP=6,PT=8,PB=16,IH=height-PT-PB;
+  var xAt=function(i){return LP+(i/(pts.length-1))*(W-LP-RP);};
+  var yAt=function(v){return reversed?PT+((v-mn)/rng)*IH:PT+IH-((v-mn)/rng)*IH;};
+  var mapped=pts.map(function(d,i){return{x:xAt(i),y:yAt(d[dKey]),l:d.label};});
+  var path=mapped.map(function(p,i){return(i?"L":"M")+p.x.toFixed(1)+","+p.y.toFixed(1);}).join(" ");
+  var area=path+" L"+mapped[mapped.length-1].x.toFixed(1)+","+( PT+IH)+" L"+mapped[0].x.toFixed(1)+","+(PT+IH)+" Z";
+  var gid="rg"+dKey+Math.random().toString(36).slice(2,6);
+  var step=Math.max(1,Math.ceil(mapped.length/6));
+  var circles=mapped.map(function(p){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="'+color+'"/>';}).join("");
+  var xlbls=mapped.filter(function(_,i){return i%step===0||i===mapped.length-1;}).map(function(p){return'<text x="'+p.x.toFixed(1)+'" y="'+height+'" text-anchor="middle" font-size="9" fill="#5A5A5A">'+p.l+'</text>';}).join("");
+  var yTicks=reversed?[mn,(mn+mx)/2,mx]:[mx,(mn+mx)/2,mn];
+  var yY=[PT,PT+IH/2,PT+IH];
+  var ylbls=yTicks.map(function(v,i){return'<text x="'+(LP-4)+'" y="'+(yY[i]+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#5A5A5A">'+v.toFixed(1)+'</text>';}).join("");
+  var yline='<line x1="'+LP+'" y1="'+PT+'" x2="'+LP+'" y2="'+(PT+IH)+'" stroke="#282828" stroke-width="1"/>';
+  return'<svg viewBox="0 0 '+W+' '+height+'" style="width:100%;height:'+height+'px"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity="0.2"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>'+yline+'<path d="'+area+'" fill="url(#'+gid+')"/><path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+circles+ylbls+xlbls+'</svg>';
+}
+
+function corpoCorrelation(weightData){
+  // For each weight measurement, find km run in prior 7 days
+  var acts=STATE.acts.filter(function(a){return isRun(a.type);});
+  var points=[];
+  weightData.forEach(function(w){
+    var wDate=new Date(w.d);
+    var from=new Date(wDate);from.setDate(from.getDate()-7);
+    var km7=acts.filter(function(a){var d=new Date(a.start_date);return d>=from&&d<=wDate;}).reduce(function(s,r){return s+r.distance/1000;},0);
+    // Weight change vs previous measurement
+    var idx=weightData.indexOf(w);
+    if(idx>0){
+      var prev=weightData[idx-1];
+      var daysDiff=(wDate-new Date(prev.d))/(1000*86400);
+      if(daysDiff>0&&daysDiff<=40){
+        var wChg=w.p-prev.p;
+        points.push({km:+km7.toFixed(1),chg:+wChg.toFixed(2),label:w.d.slice(5)});
+      }
+    }
+  });
+  if(points.length<3)return'<p style="font-size:12px;color:#5A5A5A">Dados insuficientes para correlação.</p>';
+
+  // Scatter-like bar: km on x, weight change on y
+  var html='<p style="font-size:10px;color:#5A5A5A;margin-bottom:10px">km corridos nos 7 dias antes da pesagem vs variação de peso</p>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  points.forEach(function(pt){
+    var color=pt.chg<0?"#00C896":"#EF4444";
+    var sign=pt.chg<0?"":"+";;
+    html+='<div style="display:flex;align-items:center;gap:8px;font-size:11px">';
+    html+='<div style="width:50px;color:#5A5A5A;text-align:right">'+pt.label+'</div>';
+    html+='<div style="width:50px;color:#FC4C02">'+pt.km+' km</div>';
+    html+='<div style="flex:1;background:#222;border-radius:4px;height:14px;overflow:hidden">';
+    var barW=Math.min(Math.abs(pt.chg)/3*100,100);
+    html+='<div style="width:'+barW+'%;height:100%;background:'+color+'"></div></div>';
+    html+='<div style="width:42px;color:'+color+';font-weight:700;text-align:right">'+sign+pt.chg+' kg</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function coachCorpo(cur,first,runStart,totalLoss,runLoss,pre,pos){
+  var lines=[];
+  // Weight loss rate
+  var daysSince=(new Date()-new Date(first.d))/(1000*86400);
+  var weeklyLoss=(parseFloat(totalLoss)/(daysSince/7)).toFixed(2);
+  lines.push("**Perda total de "+totalLoss+" kg em "+Math.round(daysSince/7)+" semanas** — média de "+weeklyLoss+" kg/semana. "+( parseFloat(weeklyLoss)<0.8?"Dentro da faixa ideal de 0,5-1,0 kg/semana para preservar massa muscular.":"Ritmo acelerado — certifique-se de que o déficit calórico não está comprometendo a recuperação dos treinos."));
+  if(runStart){
+    lines.push("**Desde que começou a correr:** -"+runLoss+" kg. A corrida aeróbica aumenta o EPOC (consumo excessivo de oxigênio pós-exercício) por até 24h — o déficit calórico continua depois do treino, não apenas durante.");
+  }
+  if(pre.length>0){
+    var firstGord=pre[0].gord,lastGord=pre[pre.length-1].gord;
+    var gordLoss=(firstGord-lastGord).toFixed(1);
+    if(gordLoss>0){
+      lines.push("**Gordura corporal reduziu "+gordLoss+" pontos percentuais** no período acompanhado. Isso indica perda predominantemente de gordura, não de massa magra — sinal de que o protocolo de treino + dieta está correto.");
+    }
+  }
+  lines.push("**Metabolismo basal atual: "+cur.tmb+" kcal/dia.** Para perda de 0,75 kg/semana, o target calórico é "+(cur.tmb-550)+" kcal/dia, considerando o gasto adicional das corridas.");
+  lines.push("**Próximos 60 dias:** combine o aumento da corrida longa (meta: 10K) com manutenção do déficit calórico moderado. Abaixo de 118 kg, a relação peso/potência aeróbica melhora significativamente — cada kg perdido equivale a ~4s/km de melhora de pace.");
+  var html='<div class="coach-title">Coach IA · Composição Corporal</div><div class="coach-body">';
+  lines.forEach(function(line){
+    var formatted=esc(line).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+    html+='<p>'+formatted+'</p>';
+  });
+  html+='</div>';
+  return html;
+}
 
 init();
 </script>
