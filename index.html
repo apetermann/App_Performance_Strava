@@ -98,6 +98,46 @@
   .coach-body strong{color:#00C896}
   .install-hint{margin-top:18px;padding:10px 14px;background:#111;border:1px dashed #282828;border-radius:10px;font-size:10px;color:#5A5A5A;text-align:center}
 
+
+    /* ═══ PREMIUM DARK v2 — Energy Reserve Style ═══ */
+    html,body{background:#070809}
+    #header{background:rgba(7,8,9,.97);border-bottom:1px solid #111;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+    .h-avatar{background:linear-gradient(135deg,#FF6B35,#E03800);box-shadow:0 0 28px rgba(252,76,2,.45)}
+    .h-sub{font-size:10px;color:#333;letter-spacing:.5px}
+    .h-chip{background:#0D0D0D;border:1px solid #181818;color:#444}
+    .h-chip span{color:#FF6B00}
+    .h-refresh{background:transparent;border:1px solid rgba(252,76,2,.35);color:#FF6B00;border-radius:10px;font-weight:700;letter-spacing:.3px}
+    .tab{background:#0D0D0D;border:1px solid #181818;color:#333;border-radius:10px;font-weight:700;letter-spacing:.3px;transition:all .2s}
+    .tab.active{background:linear-gradient(135deg,#FF6B35,#E03800);color:#fff;border-color:transparent;box-shadow:0 4px 20px rgba(252,76,2,.4)}
+    .card{background:#0D0D0D;border:1px solid #181818;box-shadow:0 4px 24px rgba(0,0,0,.5);border-radius:16px}
+    .stat-grid{gap:10px;margin-top:6px}
+    .stat-box{background:#0D0D0D;border:1px solid #181818;border-radius:16px;padding:16px 12px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .stat-val{font-size:30px;letter-spacing:-1px}
+    .stat-lbl{font-size:9px;color:#333;margin-top:5px;letter-spacing:1.5px}
+    .stat-sub{font-size:9px;color:#2A2A2A;margin-top:3px}
+    .sec{font-size:9px;color:#2A2A2A;letter-spacing:2.5px;margin:22px 0 12px}
+    .coach-card{background:#050F0A;border:1px solid rgba(0,214,143,.12);border-radius:16px;border-left:3px solid #00D68F;box-shadow:0 0 30px rgba(0,214,143,.05)}
+    .coach-title{color:#00D68F;letter-spacing:2.5px}
+    .coach-body strong{color:#00D68F}
+    .anal-card{background:#100A07;border:1px solid rgba(252,76,2,.15);border-radius:16px;border-left:3px solid #FF6B00}
+    .day-card{background:#0D0D0D;border:1px solid #181818;border-radius:14px}
+    .day-name{color:#444}
+    .day-muted{color:#2A2A2A}
+    .streak-card{background:rgba(255,107,0,.05);border:1px solid rgba(255,107,0,.1)}
+    .zone-bar-bg{background:#111}
+    .week-label{color:#2A2A2A;font-size:10px;letter-spacing:1px}
+    .install-hint{background:#080808;border-color:#141414;color:#2A2A2A}
+    /* Glow on key numbers */
+    .glow-or{color:#FF6B00;text-shadow:0 0 20px rgba(255,107,0,.5)}
+    .glow-gr{color:#00D68F;text-shadow:0 0 20px rgba(0,214,143,.45)}
+    .glow-rd{color:#FF3B30;text-shadow:0 0 16px rgba(255,59,48,.4)}
+    /* Arc Gauge */
+    .gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;position:relative}
+    .gauge-meta{display:flex;justify-content:space-around;width:100%;margin-top:8px}
+    .gauge-meta-item{text-align:center}
+    .gauge-meta-val{font-family:'Syne',sans-serif;font-weight:800;font-size:16px}
+    .gauge-meta-lbl{font-size:9px;color:#2A2A2A;letter-spacing:1.5px;margin-top:2px}
+
     /* Error */
     #error-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:16px;text-align:center}
     .err-btn{background:#FC4C02;border:none;border-radius:10px;padding:12px 28px;color:#fff;font-size:14px;font-weight:700}
@@ -176,7 +216,7 @@ const REDIR = location.origin + location.pathname;
 const STOK  = "https://www.strava.com/oauth/token";
 const SAUTH = "https://www.strava.com/oauth/authorize";
 const SAPI  = "https://www.strava.com/api/v3";
-const OR="#FC4C02",GR="#00C896",BL="#3B82F6";
+const OR="#FF6B00",GR="#00D68F",BL="#3B82F6";
 const ZC=["#FECACA","#FCA5A5","#F87171","#EF4444","#B91C1C"];
 const DZ=[{min:0,max:115},{min:115,max:152},{min:152,max:171},{min:171,max:190},{min:190,max:-1}];
 const DAYS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
@@ -500,9 +540,16 @@ function renderWeek(container,offset){
   const anal=analyzeWeek(wa,pa,offset===0);
   const zpct=estimateZones(wa,STATE.zones);
 
+  // Arc gauge hero
+  const metaItems=[
+    {val:runs.length||"0",lbl:"corridas",positive:runs.length>0},
+    {val:asp>0?fmtPace(asp)+"/km":"—",lbl:"pace médio",positive:null},
+    {val:avgHR?avgHR+"bpm":"—",lbl:"fc média",positive:null}
+  ];
   // Stats
   const sub=chg!=null?`${chg>=0?"+":""}${chg.toFixed(0)}% vs ant.`:"";
-  let html=`<div class="stat-grid">
+  let html=arcGauge(tkm,30,"km esta semana",metaItems);
+  html+=`<div class="stat-grid">
     <div class="stat-box"><div class="stat-val" style="color:${OR}">${tkm.toFixed(1)}</div><div class="stat-lbl">km total</div>${sub?`<div class="stat-sub">${sub}</div>`:""}</div>
     <div class="stat-box"><div class="stat-val">${asp>0?fmtPace(asp):"--"}</div><div class="stat-lbl">pace médio</div></div>
     <div class="stat-box"><div class="stat-val">${runs.length}</div><div class="stat-lbl">corridas</div></div>
