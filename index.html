@@ -1103,6 +1103,52 @@ function _coachCorpo(totalLoss,runLoss){
   return html+'</div>';
 }
 
+function _ptOnArc(cx,cy,r,deg){
+  var rad=(deg-90)*Math.PI/180;
+  return {x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)};
+}
+function _arcPath(cx,cy,r,a1,a2){
+  var s=_ptOnArc(cx,cy,r,a1),e=_ptOnArc(cx,cy,r,a2);
+  var lg=(a2-a1)>180?1:0;
+  return "M "+s.x.toFixed(2)+" "+s.y.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+e.x.toFixed(2)+" "+e.y.toFixed(2);
+}
+function arcGauge(val,max,mainLbl,metaItems){
+  var pct=Math.min(Math.max(val/max,0),1);
+  var W=260,CX=130,CY=140,R=95,SW=14;
+  var startDeg=145,span=250;
+  var fillDeg=startDeg+span*pct;
+  var bgPath=_arcPath(CX,CY,R,startDeg,startDeg+span);
+  var fillPath=pct>0.005?_arcPath(CX,CY,R,startDeg,fillDeg):"";
+  var gid="ag"+Math.random().toString(36).slice(2,6);
+  var tipColor=pct>0.65?"#00D68F":pct>0.35?"#FF9500":"#FF3B30";
+  var displayVal=val>0?val.toFixed(1):"0";
+  var tipPt=pct>0.02?_ptOnArc(CX,CY,R,fillDeg):null;
+  var svg='<svg viewBox="0 0 260 260" style="width:220px;height:220px;overflow:visible">'
+    +'<defs>'
+    +'<linearGradient id="'+gid+'" x1="0%" y1="100%" x2="100%" y2="0%">'
+    +'<stop offset="0%" stop-color="#FF3B30"/>'
+    +'<stop offset="45%" stop-color="#FF9500"/>'
+    +'<stop offset="100%" stop-color="#00D68F"/>'
+    +'</linearGradient>'
+    +'<filter id="gf'+gid+'">'
+    +'<feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>'
+    +'<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
+    +'</filter>'
+    +'</defs>'
+    +'<path d="'+bgPath+'" fill="none" stroke="#111" stroke-width="'+SW+'" stroke-linecap="round"/>'
+    +(fillPath?'<path d="'+fillPath+'" fill="none" stroke="url(#'+gid+')" stroke-width="'+SW+'" stroke-linecap="round" filter="url(#gf'+gid+')"/>':"")
+    +(tipPt?'<circle cx="'+tipPt.x.toFixed(1)+'" cy="'+tipPt.y.toFixed(1)+'" r="8" fill="#fff" opacity=".9"/><circle cx="'+tipPt.x.toFixed(1)+'" cy="'+tipPt.y.toFixed(1)+'" r="5" fill="'+tipColor+'"/>':"")
+    +'<text x="'+CX+'" y="'+(CY-8)+'" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="48" fill="#fff" letter-spacing="-2">'+displayVal+'</text>'
+    +'<text x="'+CX+'" y="'+(CY+18)+'" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#444" letter-spacing="2">'+mainLbl.toUpperCase()+'</text>'
+    +'</svg>';
+  var metaHtml='<div class="gauge-meta">';
+  (metaItems||[]).forEach(function(m){
+    var gc=m.positive===true?"glow-gr":m.positive===false?"glow-rd":"glow-or";
+    metaHtml+='<div class="gauge-meta-item"><div class="gauge-meta-val '+gc+'">'+m.val+'</div><div class="gauge-meta-lbl">'+m.lbl+'</div></div>';
+  });
+  return '<div class="gauge-wrap">'+svg+metaHtml+'</div>';
+}
+
 init();
 </script>
 </body>
