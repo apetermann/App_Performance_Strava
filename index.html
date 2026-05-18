@@ -224,7 +224,9 @@ const DAYS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
 // ── UTILS ────────────────────────────────────────────────────────────────────
 const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 const isRun=t=>["Run","TrailRun","VirtualRun"].includes(t);
-const isGym=t=>["WeightTraining","Yoga","Workout"].includes(t);
+const isGym=t=>["WeightTraining","Yoga","Workout","Crossfit","Pilates","Elliptical","StairStepper","RockClimbing"].includes(t);
+const isOther=t=>!isRun(t)&&!isGym(t)&&t!=="Ride"&&t!=="VirtualRide"&&t!=="Swim";
+function actLabel(t){if(isRun(t))return"Corrida";if(isGym(t))return"Musculação";if(t==="Swim")return"Natação";if(t==="Ride"||t==="VirtualRide")return"Ciclismo";return t||"Outro";}
 const fmtPace=ms=>{if(!ms)return"--";const s=1000/ms;return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;};
 const paceN=ms=>ms?+(1000/ms/60).toFixed(2):null;
 const paSt=n=>{const m=Math.floor(n),s=Math.round((n-m)*60);return`${m}:${String(s).padStart(2,"0")}`;};
@@ -423,6 +425,8 @@ function estimateZones(acts,ranges){
 // ── COACH ANALYSIS ────────────────────────────────────────────────────────────
 function analyzeWeek(wActs,pActs,isCurrent){
   const wr=wActs.filter(a=>isRun(a.type));
+  const wg=wActs.filter(a=>isGym(a.type));
+  const pg=pActs.filter(a=>isGym(a.type));
   const pr=pActs.filter(a=>isRun(a.type));
   const wkm=wr.reduce((s,r)=>s+r.distance/1000,0);
   const pkm=pr.reduce((s,r)=>s+r.distance/1000,0);
@@ -434,7 +438,10 @@ function analyzeWeek(wActs,pActs,isCurrent){
   const chg=pkm>0?(wkm-pkm)/pkm*100:null;
   const pcChg=wsp>0&&psp>0?paceN(wsp)-paceN(psp):null;
 
-  if(!wr.length)return{headline:isCurrent?"Nenhuma corrida ainda esta semana":"Semana sem corridas",points:[isCurrent?"Semana em andamento. Descanso ativo faz parte do processo.":"Semana de descanso ou intercorrência."],conclusion:""};
+  const gymTime=Math.round(wg.reduce((s,a)=>s+(a.elapsed_time||0),0)/60);
+  const gymEffort=wg.reduce((s,a)=>s+(a.suffer_score||0),0);
+  if(!wr.length)return{headline:isCurrent?"Nenhuma corrida ainda esta semana":"Semana sem corridas",points:[wg.length>0?"💪 "+wg.length+" sessão(ões) de musculação — "+gymTime+"min de treino de força. Contribui para economia de corrida e prevenção de lesões.":"Semana de descanso ativo."],conclusion:wg.length>0?"Força bem mantida. Corridas na próxima semana.":""};
+  const pGymSessions=pg.length;
 
   const pts=[];
   if(chg!==null)pts.push(`${chg>=0?"📈":"📉"} Volume ${chg>=0?"acima":"abaixo"} da semana anterior — ${Math.abs(chg).toFixed(0)}% (${pkm.toFixed(1)} → ${wkm.toFixed(1)} km). ${chg>15?"Progressão alta — monitore fadiga.":chg<-25?"Volume reduzido — se intencional, ótimo.":"Progressão segura."}`);
@@ -442,8 +449,18 @@ function analyzeWeek(wActs,pActs,isCurrent){
   if(avgHR){const z=avgHR<115?"Z1":avgHR<152?"Z2 (aeróbico base)":avgHR<171?"Z3 (intenso)":"Z4+";pts.push(`❤️ FC média: ${avgHR} bpm (${z}). ${avgHR<152?"Ideal para construção aeróbica.":"Alta intensidade — garanta recuperação."}`);}
   if(effort>0)pts.push(`🔥 Esforço relativo: ${effort} pts — ${effort>150?"alta carga.":effort>80?"carga moderada.":"carga leve."}`);
 
-  const conc=isCurrent?(wr.length>=3?"Frequência consistente esta semana.":"Adicione mais uma corrida para manter o streak."):(pcChg&&pcChg<-0.1?"Semana com evolução de ritmo — ótimo sinal.":"Semana sólida de base aeróbica.");
-  return{headline:`${wr.length} corrida${wr.length>1?"s":""} · ${wkm.toFixed(1)} km${chg!=null?" ("+(chg>=0?"+":"")+chg.toFixed(0)+"% vs ant.)":""}`,points:pts,conclusion:conc};
+  // Gym point
+  if(wg.length>0){
+    const gymMin=Math.round(wg.reduce((s,a)=>s+(a.elapsed_time||0),0)/60);
+    const gymEff=wg.reduce((s,a)=>s+(a.suffer_score||0),0);
+    const pGym=pg.length;
+    pts.push("💪 "+wg.length+" sessão(ões) de musculação · "+gymMin+"min"+(gymEff>0?" · esforço "+gymEff+" pts":"")+(pGym>0?" (vs "+pGym+" semana ant.)":"")+". Força complementar melhora economia de corrida e reduz risco de lesão.");
+  }
+  // Combined load
+  const totalEffort=(wr.reduce((s,r)=>s+(r.suffer_score||0),0))+(wg.reduce((s,a)=>s+(a.suffer_score||0),0));
+  if(totalEffort>0&&wg.length>0) pts.push("⚡ Carga combinada (corrida+musculação): "+totalEffort+" pts. "+(totalEffort>200?"Alta carga total — priorize sono e alimentação.":totalEffort>100?"Carga moderada — equilíbrio ideal.":"Carga controlada — espaço para progredir."));
+  const conc=isCurrent?(wr.length>=3&&wg.length>=2?"Semana completa: corrida + força.":(wr.length>=3?"Frequência de corrida ótima — adicione musculação.":wg.length>=2?"Força em dia — adicione mais uma corrida.":"Adicione corridas e musculação para completar a semana.")):(pcChg&&pcChg<-0.1?"Semana com evolução de ritmo — ótimo sinal.":"Semana sólida de base aeróbica.");
+  return{headline:`${wr.length} corrida${wr.length>1?"s":""} · ${wkm.toFixed(1)} km`+(wg.length>0?" · "+wg.length+"x força":"")+(chg!=null?" ("+(chg>=0?"+":"")+chg.toFixed(0)+"% vs ant.)":""),points:pts,conclusion:conc};
 }
 
 function analyzeSix(monthly,totalKm,count,streak,maxKm){
@@ -802,7 +819,7 @@ renderAll = function() {
     var c = document.getElementById(v.vid); if (!c) return;
     var div = document.createElement("div"); div.className="sec"; div.textContent="Coach IA"; c.appendChild(div);
     var card = document.createElement("div"); card.className="coach-card"; card.id="coach-"+v.vid; c.appendChild(card);
-    var wa = v.offset>=0 ? filterWeek(STATE.acts,v.offset) : STATE.acts;
+    var wa = v.offset>=0 ? filterWeek(STATE.acts,v.offset) : STATE.acts; // all acts
     var pa = v.offset>=0 ? filterWeek(STATE.acts,v.offset+1) : [];
     _renderCoach("coach-"+v.vid, v.label, wa, pa);
   });
