@@ -181,6 +181,7 @@
         <button class="tab" onclick="switchTab('anterior')" id="tab-anterior">Semana Ant.</button>
         <button class="tab" onclick="switchTab('meses')" id="tab-meses">6 Meses</button>
         <button class="tab" onclick="switchTab('corpo')" id="tab-corpo">Corpo</button>
+        <button class="tab" onclick="switchTab('hoje')" id="tab-hoje">Hoje</button>
       </div>
     </div>
     <div id="content">
@@ -189,6 +190,7 @@
       <div id="view-anterior" style="display:none"></div>
       <div id="view-meses" style="display:none"></div>
       <div id="view-corpo" style="display:none"></div>
+      <div id="view-hoje" style="display:none"></div>
       <div class="install-hint">📱 Safari → Compartilhar → Adicionar à Tela de Início</div>
     </div>
   </div>
@@ -341,7 +343,7 @@ function showMain(){
 // ── TABS ─────────────────────────────────────────────────────────────────────
 function switchTab(tab){
   STATE.tab=tab;
-  ["atual","anterior","meses","corpo"].forEach(t=>{
+  ["atual","anterior","meses","corpo","hoje"].forEach(t=>{
     document.getElementById(`tab-${t}`).className="tab"+(t===tab?" active":"");
     document.getElementById(`view-${t}`).style.display=t===tab?"block":"none";
   });
@@ -350,6 +352,7 @@ function switchTab(tab){
   else if(tab==="anterior"){wl.textContent=weekLabel(1);wl.style.display="block";}
   else wl.style.display="none";
   if(tab==="corpo")renderCorpo();
+  if(tab==="hoje")renderHoje();
 }
 
 // ── WEEK HELPERS ──────────────────────────────────────────────────────────────
@@ -1164,6 +1167,233 @@ function arcGauge(val,max,mainLbl,metaItems){
     metaHtml+='<div class="gauge-meta-item"><div class="gauge-meta-val '+gc+'">'+m.val+'</div><div class="gauge-meta-lbl">'+m.lbl+'</div></div>';
   });
   return '<div class="gauge-wrap">'+svg+metaHtml+'</div>';
+}
+
+// ── HOJE ──────────────────────────────────────────────────────────────────
+var _hojeCache=null;
+
+function renderHoje(){
+  var c=document.getElementById("view-hoje");
+  if(!c)return;
+  if(_hojeCache){_paintHoje(c,_hojeCache.detail,_hojeCache.laps);return;}
+
+  var acts=STATE.acts;
+  if(!acts||!acts.length){c.innerHTML='<p style="padding:20px;color:#666">Nenhuma atividade encontrada.</p>';return;}
+
+  var act=acts[0];
+  c.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;gap:12px">'
+    +'<div style="font-size:24px;animation:cspin 1.2s linear infinite;display:inline-block">⟳</div>'
+    +'<p style="color:#555;font-size:13px">Carregando detalhes da atividade...</p></div>';
+
+  var tok=ls.get("s_tok");
+  stravaGet("/activities/"+act.id,tok).then(function(detail){
+    stravaGet("/activities/"+act.id+"/laps",tok).then(function(laps){
+      _hojeCache={detail:detail,laps:laps||[]};
+      _paintHoje(c,detail,laps||[]);
+    }).catch(function(){
+      _hojeCache={detail:detail,laps:[]};
+      _paintHoje(c,detail,[]);
+    });
+  }).catch(function(err){
+    c.innerHTML='<div style="padding:20px;color:#EF4444;font-size:13px">Erro ao carregar: '+esc(String(err))+'</div>';
+  });
+}
+
+function _paintHoje(c,act,laps){
+  try{
+    var run=isRun(act.type);
+    var gym=isGym(act.type);
+    var distKm=+(act.distance/1000).toFixed(2)||0;
+    var movSec=act.moving_time||act.elapsed_time||0;
+    var elSec=act.elapsed_time||movSec;
+    var avgHR=Math.round(act.average_heartrate)||0;
+    var maxHR=Math.round(act.max_heartrate)||0;
+    var elev=Math.round(act.total_elevation_gain)||0;
+    var cal=Math.round(act.calories||act.kilojoules*0.239||0);
+    var effort=act.suffer_score||0;
+    var asp=act.average_speed||0;
+    var msp=act.max_speed||0;
+    var actDate=new Date(act.start_date||act.start_date_local);
+    var now=new Date();
+    var daysAgo=Math.floor((now-actDate)/(1000*86400));
+    var dateLabel=daysAgo===0?"Hoje":daysAgo===1?"Ontem":daysAgo+" dias atrás";
+
+    var html='';
+
+    // ── HEADER ──
+    html+='<div style="text-align:center;padding:16px 0 8px">'
+      +'<div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">'+dateLabel+' · '+actDate.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"short"})+'</div>'
+      +'<div style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:18px;color:#F0F0F0">'+esc(act.name||"Atividade")+'</div>'
+      +'<div style="font-size:11px;color:#FF6B00;margin-top:4px;letter-spacing:1px">'+actLabel(act.type).toUpperCase()+'</div>'
+      +'</div>';
+
+    // ── ARC GAUGE ──
+    if(run){
+      var gaugeMax=Math.max(distKm*1.5,10);
+      html+=arcGauge(distKm,gaugeMax,"km percorridos",[
+        {val:fmtPace(asp)+"/km",lbl:"pace médio",positive:null},
+        {val:_fmtSec(movSec),lbl:"tempo",positive:null},
+        {val:elev+"m",lbl:"elevação",positive:null}
+      ]);
+    } else {
+      var gaugeMin=Math.round(elSec/60);
+      html+=arcGauge(Math.min(gaugeMin,120),120,"min de treino",[
+        {val:_fmtSec(elSec),lbl:"duração",positive:null},
+        {val:effort||"—",lbl:"esforço",positive:effort>0},
+        {val:cal?cal+"kcal":"—",lbl:"calorias",positive:null}
+      ]);
+    }
+
+    // ── STATS GRID ──
+    html+='<div class="sec">'+(run?"Métricas da Corrida":"Métricas do Treino")+'</div>';
+    html+='<div class="stat-grid">';
+    if(run){
+      html+='<div class="stat-box"><div class="stat-val glow-or">'+distKm.toFixed(2)+'</div><div class="stat-lbl">km</div></div>';
+      html+='<div class="stat-box"><div class="stat-val">'+fmtPace(asp)+'</div><div class="stat-lbl">pace médio</div></div>';
+      html+='<div class="stat-box"><div class="stat-val">'+fmtPace(msp)+'</div><div class="stat-lbl">pace máximo</div></div>';
+      html+='<div class="stat-box"><div class="stat-val">'+_fmtSec(movSec)+'</div><div class="stat-lbl">tempo em mov.</div></div>';
+      if(avgHR)html+='<div class="stat-box"><div class="stat-val glow-rd">'+avgHR+'</div><div class="stat-lbl">fc média bpm</div></div>';
+      if(maxHR)html+='<div class="stat-box"><div class="stat-val">'+maxHR+'</div><div class="stat-lbl">fc máxima bpm</div></div>';
+      if(elev)html+='<div class="stat-box"><div class="stat-val">'+elev+'m</div><div class="stat-lbl">elevação</div></div>';
+      if(cal)html+='<div class="stat-box"><div class="stat-val">'+cal+'</div><div class="stat-lbl">kcal</div></div>';
+    } else {
+      html+='<div class="stat-box"><div class="stat-val">'+_fmtSec(elSec)+'</div><div class="stat-lbl">duração total</div></div>';
+      html+='<div class="stat-box"><div class="stat-val">'+_fmtSec(movSec)+'</div><div class="stat-lbl">tempo em mov.</div></div>';
+      if(effort)html+='<div class="stat-box"><div class="stat-val glow-or">'+effort+'</div><div class="stat-lbl">esforço relativo</div></div>';
+      if(cal)html+='<div class="stat-box"><div class="stat-val glow-gr">'+cal+'</div><div class="stat-lbl">kcal estimadas</div></div>';
+      if(avgHR)html+='<div class="stat-box"><div class="stat-val glow-rd">'+avgHR+'</div><div class="stat-lbl">fc média bpm</div></div>';
+      if(maxHR)html+='<div class="stat-box"><div class="stat-val">'+maxHR+'</div><div class="stat-lbl">fc máxima bpm</div></div>';
+    }
+    html+='</div>';
+
+    // ── LAPS / INTERVALOS (corrida) ──
+    if(run&&laps&&laps.length>1){
+      html+='<div class="sec">'+( laps.length>4?"Intervalos & Splits":"Splits por Lap")+'</div>';
+      html+='<div class="card" style="padding:14px">'+_renderLaps(laps,asp)+'</div>';
+    }
+
+    // ── HR ZONES ──
+    var zpct=estimateZones([act],STATE.zones);
+    if(zpct&&avgHR){
+      html+='<div class="sec">Zonas de Frequência Cardíaca</div>';
+      html+='<div class="card" style="padding:14px">'+zonesHtml(zpct,STATE.zones)+'</div>';
+    }
+
+    // ── COACH ──
+    html+='<div class="sec">Coach IA · Análise da Atividade</div>';
+    html+='<div class="coach-card">'+_coachHoje(act,laps,run,gym,distKm,asp,msp,avgHR,maxHR,elev,cal,effort,movSec)+'</div>';
+
+    c.innerHTML=html;
+  }catch(err){
+    c.innerHTML='<div style="padding:20px;color:#EF4444;font-size:13px">Erro: '+String(err)+'</div>';
+  }
+}
+
+function _fmtSec(s){
+  var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
+  if(h>0)return h+"h"+String(m).padStart(2,"0")+"min";
+  return m+"min"+( sec>0?" "+String(sec).padStart(2,"0")+"s":"");
+}
+
+function _renderLaps(laps,avgSp){
+  var avgPace=paceN(avgSp);
+  var lapPaces=laps.map(function(l){return l.average_speed>0?paceN(l.average_speed):null;}).filter(function(v){return v;});
+  var minP=lapPaces.length?Math.min.apply(null,lapPaces):avgPace;
+  var maxP=lapPaces.length?Math.max.apply(null,lapPaces):avgPace;
+  var pRange=Math.max(maxP-minP,0.5);
+  var hasIntervals=pRange>0.5;
+
+  var html='<div style="font-size:10px;color:#555;margin-bottom:10px">'
+    +(hasIntervals?"Variação de ritmo detectada — provável treino intervalado":"Splits uniformes — corrida contínua")+'</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+
+  laps.forEach(function(lap,i){
+    var sp=lap.average_speed||0;
+    var lp=sp>0?paceN(sp):null;
+    var distL=+(lap.distance/1000).toFixed(2);
+    var timeL=_fmtSec(lap.moving_time||lap.elapsed_time||0);
+    var hr=Math.round(lap.average_heartrate)||0;
+    // Color based on pace relative to avg
+    var color="#FF6B00";
+    if(lp){
+      var rel=(lp-minP)/pRange;
+      color=rel<0.3?"#00D68F":rel<0.7?"#FF9500":"#FF3B30";
+    }
+    var barW=lp?Math.max(10,Math.round((1-(lp-minP)/pRange)*100)):50;
+    html+='<div style="display:flex;align-items:center;gap:8px;font-size:11px">'
+      +'<div style="width:36px;color:#555;flex-shrink:0;font-weight:700">L'+(i+1)+'</div>'
+      +'<div style="width:36px;color:#777;flex-shrink:0">'+distL+'km</div>'
+      +'<div style="flex:1;background:#111;border-radius:4px;height:16px;overflow:hidden;position:relative">'
+      +'<div style="width:'+barW+'%;height:100%;background:'+color+';opacity:.85;border-radius:4px"></div>'
+      +'</div>'
+      +'<div style="width:52px;color:'+color+';font-weight:700;flex-shrink:0">'+(lp?fmtPace(sp)+"/km":"—")+'</div>'
+      +(hr?'<div style="width:38px;color:#555;flex-shrink:0;font-size:10px">'+hr+'bpm</div>':'')
+      +'</div>';
+  });
+  return html+'</div>';
+}
+
+function _coachHoje(act,laps,run,gym,distKm,asp,msp,avgHR,maxHR,elev,cal,effort,movSec){
+  var lines=[];
+  // Get historical context
+  var allRuns=STATE.acts.filter(function(a){return isRun(a.type);});
+  var recentRuns=allRuns.slice(0,10);
+
+  if(run){
+    // Pace context
+    var avgHistPace=recentRuns.length>1?recentRuns.reduce(function(s,r){return s+(r.average_speed||0);},0)/recentRuns.length:0;
+    var pace=paceN(asp);
+    var histPace=avgHistPace?paceN(avgHistPace):0;
+    if(histPace){
+      var diff=Math.round((pace-histPace)*60);
+      if(diff<-10)lines.push("**Pace de "+fmtPace(asp)+"/km — "+Math.abs(diff)+"s/km abaixo da sua média histórica.** Excelente desempenho. O sistema cardiovascular está operando com maior eficiência metabólica.");
+      else if(diff>10)lines.push("**Pace de "+fmtPace(asp)+"/km — "+diff+"s/km acima da sua média histórica.** Corrida em ritmo de recuperação ou em terreno mais exigente. Ambos têm papel fisiológico importante.");
+      else lines.push("**Pace de "+fmtPace(asp)+"/km — dentro da sua média histórica** ("+fmtPace(avgHistPace)+"/km). Corrida consistente com o padrão de base aeróbica.");
+    }
+    // Distance context
+    var maxDist=allRuns.length?Math.max.apply(null,allRuns.map(function(r){return r.distance/1000;})):0;
+    if(distKm>=maxDist*0.95)lines.push("**Nova maior distância ou próximo do seu recorde!** "+distKm.toFixed(2)+"km é um marco importante — o corpo precisará de 36-48h extras de recuperação para absorver a carga.");
+    else if(distKm<5)lines.push("**Corrida curta de "+distKm.toFixed(2)+"km.** Excelente para manutenção de frequência sem estressar o sistema musculoesquelético. Consistência > distância nesta fase.");
+    // HR analysis
+    if(avgHR&&maxHR){
+      var hrRange=maxHR-avgHR;
+      if(hrRange>30)lines.push("**Variação de FC alta** ("+avgHR+"→"+maxHR+" bpm, Δ"+hrRange+"). Pode indicar mudanças de ritmo, subidas ou esforço final acelerado.");
+      else lines.push("**FC controlada** (média "+avgHR+" / máx "+maxHR+" bpm). Resposta cardiovascular estável — sinal de boa adaptação aeróbica.");
+    }
+    // Laps / intervals
+    if(laps&&laps.length>1){
+      var lapSpeeds=laps.map(function(l){return l.average_speed||0;}).filter(function(v){return v>0;});
+      if(lapSpeeds.length>1){
+        var maxSp=Math.max.apply(null,lapSpeeds),minSp=Math.min.apply(null,lapSpeeds);
+        var variation=(paceN(minSp)-paceN(maxSp))*60;
+        if(variation>45)lines.push("**Treino intervalado detectado** — variação de "+Math.round(variation)+"s/km entre os laps. Intervalos recrutam fibras rápidas e elevam o VO2máx. Continue intercalando runs rápidos com recuperação ativa.");
+        else lines.push("**Ritmo uniforme ao longo dos "+laps.length+" splits.** Excelente controle de esforço — corrida de base em ritmo constante desenvolve a economia aeróbica.");
+      }
+    }
+    // Elevation
+    if(elev>50)lines.push("**+"+elev+"m de elevação** equivale a ~"+Math.round(elev*1.5)+"m de distância extra em esforço cardiovascular. Subidas fortalecem glúteos e isquiotibiais — direto impacto na economia de corrida plana.");
+    // Recommendation
+    var recDays=distKm>10?2:distKm>7?1.5:1;
+    lines.push("**Próximas "+Math.round(recDays*24)+"h:** priorize recuperação ativa. Proteína (1,6–2g/kg/dia) e sono 7–9h são onde 80% da adaptação acontece. Próximo treino: "+( distKm>8?"ritmo fácil Z1-Z2.":"pode manter ou progredir levemente."));
+  } else if(gym){
+    // Gym analysis
+    lines.push("**"+_fmtSec(act.elapsed_time||0)+" de treino de força** com esforço relativo de "+(effort||"—")+" pts. Musculação complementa diretamente a corrida: cada sessão de força melhora a economia de corrida em 2-8% ao longo de 8-12 semanas.");
+    if(avgHR)lines.push("**FC média de "+avgHR+" bpm.** "+(avgHR>130?"Alta intensidade cardiovascular — o treino teve caráter híbrido (força + cardio).":"Zona de esforço muscular — FC moderada é normal para treino de força com pausas adequadas."));
+    if(cal)lines.push("**~"+cal+" kcal estimadas.** O EPOC pós-treino de força eleva o metabolismo por até 48h — o gasto calórico real é significativamente maior que o registrado.");
+    // Recovery recommendation
+    lines.push("**Próximas 48h:** permita recuperação muscular ativa. Evite treino do mesmo grupo muscular. Corrida leve (Z1-Z2) no dia seguinte é compatível e acelera a recuperação por aumentar a circulação.");
+    lines.push("**Frequência ideal:** 3x musculação + 3x corrida/semana é o split que você está praticando — clinicamente validado para maximizar adaptações simultâneas de força e resistência aeróbica.");
+  } else {
+    lines.push("**"+actLabel(act.type)+" registrado.** Duração: "+_fmtSec(act.elapsed_time||0)+(effort?" · Esforço: "+effort+" pts":"")+". Toda atividade física contribui para o condicionamento geral e saúde cardiovascular.");
+    if(cal)lines.push("**~"+cal+" kcal gastas.** Combinado com o déficit calórico do seu plano alimentar, esta atividade contribui diretamente para a meta de composição corporal.");
+    lines.push("**Variedade de modalidades** é um ativo importante — reduz o risco de lesões por sobrecarga repetitiva e mantém a motivação em longo prazo.");
+  }
+
+  var html='<div class="coach-title">Coach IA · '+( run?"Análise da Corrida":gym?"Análise do Treino de Força":"Análise da Atividade")+'</div><div class="coach-body">';
+  lines.forEach(function(l){
+    html+='<p>'+esc(l).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")+'</p>';
+  });
+  return html+'</div>';
 }
 
 init();
