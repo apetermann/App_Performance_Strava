@@ -300,3 +300,14 @@ git push https://${TOKEN}@github.com/apetermann/App_Performance_Strava.git main
 ---
 
 *Última atualização: 18/05/2026*
+
+---
+## 15. ATUALIZAÇÃO — Aba "Hoje" (22/05/2026)
+- Nova aba adicionada: `view-hoje` / `tab-hoje` / `renderHoje()`
+- Busca detalhes via `/activities/{id}` + `/activities/{id}/laps`
+- Cache em `_hojeCache` (evita re-fetch)
+- Função `_paintHoje()` — renderiza baseado no tipo de atividade
+- Função `_renderLaps()` — barras coloridas por pace relativo, detecta intervalos
+- Função `_coachHoje()` — coach específico: corrida vs musculação vs outro
+- Função `_fmtSec()` — formata segundos em "Xmin Ys" ou "Xh YYmin"
+- Token GitHub atualizado: [GITHUB_TOKEN — ver com Alexandre]
