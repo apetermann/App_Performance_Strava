@@ -80,12 +80,12 @@
     .streak-fill{background:#FC4C02;border-radius:100px;height:6px}
 
     /* Zones */
-    .zone-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-    .zone-lbl{width:20px;font-size:11px;color:#DDDDDDCCC;font-weight:700}
-    .zone-bar-bg{flex:1;background:#222;border-radius:4px;height:16px;overflow:hidden}
-    .zone-bar{height:100%;border-radius:4px}
-    .zone-pct{width:30px;font-size:12px;font-weight:700;text-align:right}
-    .zone-bpm{width:72px;font-size:9px;color:#DDDDDDCCC;text-align:right}
+    .zone-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .zone-lbl{width:24px;font-size:13px;color:#BBBBBB;font-weight:800;flex-shrink:0}
+    .zone-bar-bg{flex:1;background:#1A1A1A;border-radius:6px;height:26px;overflow:hidden}
+    .zone-bar{height:100%;border-radius:6px;transition:width .4s ease}
+    .zone-pct{width:40px;font-size:15px;font-weight:800;text-align:right;flex-shrink:0}
+    .zone-bpm{width:80px;font-size:11px;color:#BBBBBDCCC;text-align:right}
 
     /* Content */
     #content{padding:12px 14px 0}
@@ -543,7 +543,7 @@ function zonesHtml(pct,ranges){
       <div class="zone-pct" style="color:${ZC[i]}">${pct[i]}%</div>
       <div class="zone-bpm">${labels[i]} bpm</div>
     </div>`).join("");
-  return`<div style="font-size:13px;font-weight:600;margin-bottom:10px">${pct[top]}% em Zona ${top+1} <span style="font-size:11px;color:#DDDDDDCCC;font-weight:400">(${labels[top]} bpm)</span></div>${rows}`;
+  return`<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;margin-bottom:14px;color:#F0F0F0">${pct[top]}% em Zona ${top+1} <span style="font-size:12px;color:#BBBBBB;font-weight:400">(${labels[top]} bpm)</span></div>${rows}`;
 }
 
 // ── RENDER WEEK ───────────────────────────────────────────────────────────────
