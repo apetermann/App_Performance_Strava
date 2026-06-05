@@ -828,6 +828,16 @@ renderAll = function() {
   });
 };
 
+// LIVE WEIGHT SYNC
+var _liveW=null;
+function fetchLiveWeight(cb){
+  if(_liveW){cb(_liveW);return;}
+  fetch('https://raw.githubusercontent.com/apetermann/App_Performance_Strava/main/weight-live.json?t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){_liveW=d;cb(d);})
+    .catch(function(){cb(null);});
+}
+
 var RENPHO=[
   {d:"2025-09-22",p:141.8,imc:42.3,gord:46.7,musc:34.1,magra:75.58,visc:24,agua:38.5,tmb:2023},
   {d:"2025-09-26",p:137.5,imc:41.1,gord:44.7,musc:35.4,magra:76.04,visc:22,agua:39.9,tmb:2032},
@@ -868,9 +878,24 @@ function renderCorpo(){
   var c=document.getElementById("view-corpo");
   if(!c||c.dataset.rendered)return;
   c.dataset.rendered="1";
+  c.innerHTML='<div style="padding:40px;text-align:center;color:#BBBBBB;font-size:13px">Sincronizando... ⟳</div>';
+  fetchLiveWeight(function(_lv){_drawCorpo(c,_lv);});
+}
+function _drawCorpo(c,_lv){
 
   // Sort ascending
   var data=RENPHO.slice().sort(function(a,b){return a.d<b.d?-1:1;});
+  // Inject live weight if newer
+  var _sb="";
+  if(_lv&&_lv.peso){
+    var _ll=data[data.length-1];
+    if((_lv.date||"")>_ll.d)data=data.concat([{d:_lv.date,p:+_lv.peso,imc:_ll.imc,gord:+(_lv.gordura||_ll.gord),musc:+(_lv.musculo||_ll.musc),magra:_ll.magra,visc:+(_lv.gordura_visceral||_ll.visc),agua:+(_lv.agua||_ll.agua),tmb:+(_lv.tmb||_ll.tmb)}]);
+    else data[data.length-1]=Object.assign({},_ll,{p:+_lv.peso,gord:+(_lv.gordura||_ll.gord)});
+    var _du=_lv.updated?new Date(_lv.updated):null;
+    var _nd=_du?Math.floor((new Date()-_du)/864e5):null;
+    var _ns=_nd===0?"hoje":_nd===1?"ontem":(_nd||"?")+'d atrás';
+    _sb='<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:8px;padding:6px 12px;font-size:10px;color:#00D68F;letter-spacing:1px;margin-bottom:12px">⚡ AUTO-SYNC APPLE SAÚDE · '+_ns.toUpperCase()+'</div>';
+  }
   var recalib="2026-04-10"; // calibration change date
   var pre=data.filter(function(r){return r.d<recalib;});
   var pos=data.filter(function(r){return r.d>=recalib;});
@@ -882,7 +907,7 @@ function renderCorpo(){
   var runStart=data.filter(function(r){return r.d>="2025-11-01";})[0];
   var runLoss=runStart?(runStart.p-cur.p).toFixed(1):"—";
 
-  var html='';
+  var html=_sb;
 
   // ── Summary cards ──
   html+='<div class="sec">Composição Corporal</div>';
