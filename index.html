@@ -1055,7 +1055,7 @@ function coachCorpo(cur,first,runStart,totalLoss,runLoss,pre,pos){
 }
 
 // CORPO
-var _wData=[{label:"09-22",peso:141.8},{label:"09-26",peso:137.5},{label:"09-30",peso:136.6},{label:"10-03",peso:135.6},{label:"10-09",peso:135.9},{label:"10-13",peso:135.4},{label:"10-17",peso:132.2},{label:"10-24",peso:130.2},{label:"10-31",peso:129.6},{label:"11-11",peso:129.3},{label:"11-14",peso:127.1},{label:"11-21",peso:126.3},{label:"11-28",peso:125.7},{label:"12-05",peso:125.2},{label:"12-12",peso:126.3},{label:"12-20",peso:122.3},{label:"12-27",peso:123.3},{label:"01-02",peso:124.7},{label:"01-09",peso:120.8},{label:"01-16",peso:118.8},{label:"02-07",peso:120.9},{label:"02-13",peso:118.5},{label:"02-20",peso:119.8},{label:"02-26",peso:120.1},{label:"02-27",peso:120.1},{label:"03-06",peso:120.2},{label:"03-13",peso:121.1},{label:"03-21",peso:121.9},{label:"03-27",peso:119.9},{label:"04-17",peso:118.6},{label:"04-24",peso:119.8},{label:"05-01",peso:118.6},{label:"05-08",peso:119.5}];
+var _wData=[{label:"09-22",peso:141.8},{label:"09-26",peso:137.5},{label:"09-30",peso:136.6},{label:"10-03",peso:135.6},{label:"10-09",peso:135.9},{label:"10-13",peso:135.4},{label:"10-17",peso:132.2},{label:"10-24",peso:130.2},{label:"10-31",peso:129.6},{label:"11-11",peso:129.3},{label:"11-14",peso:127.1},{label:"11-21",peso:126.3},{label:"11-28",peso:125.7},{label:"12-05",peso:125.2},{label:"12-12",peso:126.3},{label:"12-20",peso:122.3},{label:"12-27",peso:123.3},{label:"01-02",peso:124.7},{label:"01-09",peso:120.8},{label:"01-16",peso:118.8},{label:"02-07",peso:120.9},{label:"02-13",peso:118.5},{label:"02-20",peso:119.8},{label:"02-26",peso:120.1},{label:"02-27",peso:120.1},{label:"03-06",peso:120.2},{label:"03-13",peso:121.1},{label:"03-21",peso:121.9},{label:"03-27",peso:119.9},{label:"04-17",peso:118.6},{label:"04-24",peso:119.8},{label:"05-01",peso:118.6},{label:"05-08",peso:119.5},{label:"05-15",peso:119.9},{label:"05-22",peso:118.7},{label:"05-29",peso:119.9},{label:"06-06",peso:120.7},{label:"06-12",peso:118.8},{label:"06-22",peso:122.6},{label:"06-27",peso:120.8},{label:"07-03",peso:120.7}];
 var _gData=[{label:"09-22",gord:46.7},{label:"09-26",gord:44.7},{label:"09-30",gord:44.3},{label:"10-03",gord:43.9},{label:"10-09",gord:44.0},{label:"10-13",gord:43.8},{label:"10-17",gord:42.3},{label:"10-24",gord:41.4},{label:"10-31",gord:41.1},{label:"11-11",gord:41.0},{label:"11-14",gord:40.0},{label:"11-21",gord:39.6},{label:"11-28",gord:39.3},{label:"12-05",gord:39.1},{label:"12-12",gord:39.6},{label:"12-20",gord:37.8},{label:"12-27",gord:38.3},{label:"01-02",gord:38.9},{label:"01-09",gord:37.1},{label:"01-16",gord:36.2},{label:"02-07",gord:37.2},{label:"02-13",gord:36.1},{label:"02-20",gord:36.7},{label:"02-26",gord:36.8},{label:"02-27",gord:36.8},{label:"03-06",gord:36.8},{label:"03-13",gord:37.3},{label:"03-21",gord:37.6},{label:"03-27",gord:36.7}];
 
 function renderCorpo(){
@@ -1420,6 +1420,43 @@ function _coachHoje(act,laps,run,gym,distKm,asp,msp,avgHR,maxHR,elev,cal,effort,
   });
   return html+'</div>';
 }
+
+function _parseCsv(inp){
+  var f=inp.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    try{
+      var rows=e.target.result.split("\n").filter(function(l){return l.trim()&&!l.match(/^Data/i);});
+      var parsed=[];
+      rows.forEach(function(row){
+        var c=row.split(",");if(c.length<14)return;
+        var pts=c[0].trim().split("/");if(pts.length!==3)return;
+        var iso=pts[2]+"-"+pts[1]+"-"+pts[0];
+        var p=parseFloat(c[2]),g=parseFloat(c[4]),m=parseFloat(c[5]),a=parseFloat(c[9]),t=parseInt(c[13]);
+        if(!isNaN(p))parsed.push({iso:iso,label:iso.slice(5),peso:p,gord:g,musc:m,agua:a,tmb:t});
+      });
+      if(!parsed.length){document.getElementById("_csvMsg").textContent="Arquivo inválido.";return;}
+      parsed.sort(function(a,b){return a.iso<b.iso?-1:1;});
+      _wData=parsed.map(function(r){return{label:r.label,peso:r.peso};});
+      _gData=parsed.filter(function(r){return r.iso<"2026-04-10";}).map(function(r){return{label:r.label,gord:r.gord};});
+      var last=parsed[parsed.length-1];
+      _curPeso=last.peso;_curGord=last.gord;_curMusc=last.musc;_curAgua=last.agua;_curTmb=last.tmb;
+      ls.set("renpho_csv",JSON.stringify({w:_wData,g:_gData,p:_curPeso,go:_curGord,m:_curMusc,a:_curAgua,t:_curTmb}));
+      var c=document.getElementById("view-corpo");
+      if(c){c.dataset.rendered="";_liveW=null;_drawCorpo(c,null);}
+      document.getElementById("_csvMsg").textContent="✅ "+parsed.length+" medições · último: "+last.peso+"kg em "+last.iso;
+    }catch(er){document.getElementById("_csvMsg").textContent="Erro: "+String(er);}
+  };
+  rd.readAsText(f,"UTF-8");
+}
+
+// Restore saved CSV from localStorage
+(function(){
+  try{
+    var sv=ls.get("renpho_csv");
+    if(sv){var d=JSON.parse(sv);if(d.w&&d.w.length>_wData.length){_wData=d.w;_gData=d.g;_curPeso=d.p;_curGord=d.go;_curMusc=d.m;_curAgua=d.a;_curTmb=d.t;}}
+  }catch(e){}
+})();
 
 init();
 </script>
