@@ -1106,24 +1106,26 @@ function renderCorpo(){
 function _buildCorrel(){
   try{
     var acts=STATE.acts.filter(function(a){return isRun(a.type);});
-    var html='<p style="font-size:10px;color:#DDDDDDCCC;margin-bottom:10px">km corridos antes da pesagem vs variacao de peso</p>'
+    var html='<p style="font-size:10px;color:#BBBBBB;margin-bottom:10px">km corridos nos 7 dias antes da pesagem vs variacao de peso</p>'
       +'<div style="display:flex;flex-direction:column;gap:5px">';
     for(var i=1;i<_wData.length;i++){
       var w=_wData[i],prev=_wData[i-1];
-      var parts=w.label.split("/");
-      var iso="20"+parts[1]+"-"+parts[0]+"-01";
-      if(parts.length===2) iso="20"+parts[1]+"-"+parts[0]+"-15";
-      var wDate=new Date(w.label.length===5?"20"+w.label.split("/").reverse().join("-"):w.label);
-      var from=new Date(wDate);from.setDate(from.getDate()-10);
+      // label format: "MM-DD" e.g. "07-03"
+      // determine year from position in array (oldest=2025, recent=2026/2027)
+      var totalDays=_wData.length;
+      var yr=i<20?"2025":"2026";
+      if(w.label<"09")yr="2026";
+      var wDate=new Date(yr+"-"+w.label);
+      var from=new Date(wDate.getTime()-10*86400000);
       var km=acts.filter(function(a){var d=new Date(a.start_date);return d>=from&&d<=wDate;})
                 .reduce(function(s,r){return s+r.distance/1000;},0);
       var chg=+(w.peso-prev.peso).toFixed(1);
-      var color=chg<=0?"#00C896":"#EF4444";
+      var color=chg<=0?"#00D68F":"#EF4444";
       var sign=chg>0?"+":"";
       html+='<div style="display:flex;align-items:center;gap:6px;font-size:11px">'
-        +'<div style="width:48px;color:#DDDDDDCCC;flex-shrink:0">'+w.label+'</div>'
-        +'<div style="width:42px;color:#FC4C02;flex-shrink:0">'+km.toFixed(1)+'km</div>'
-        +'<div style="flex:1;background:#222;border-radius:3px;height:12px;overflow:hidden">'
+        +'<div style="width:48px;color:#BBBBBB;flex-shrink:0">'+w.label+'</div>'
+        +'<div style="width:42px;color:#FF6B00;flex-shrink:0">'+km.toFixed(1)+'km</div>'
+        +'<div style="flex:1;background:#1A1A1A;border-radius:3px;height:12px;overflow:hidden">'
         +'<div style="width:'+Math.min(Math.abs(chg)/3*100,100)+'%;height:100%;background:'+color+'"></div></div>'
         +'<div style="width:44px;color:'+color+';font-weight:700;text-align:right;flex-shrink:0">'+sign+chg+' kg</div>'
         +'</div>';
@@ -1131,7 +1133,6 @@ function _buildCorrel(){
     return html+'</div>';
   }catch(e){return'<p style="color:#EF4444;font-size:12px">'+String(e)+'</p>';}
 }
-
 function _coachCorpo(totalLoss,runLoss){
   var weeks=Math.round((new Date()-new Date("2025-09-22"))/(1000*86400*7));
   var rate=(parseFloat(totalLoss)/weeks).toFixed(2);
